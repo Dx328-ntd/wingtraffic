@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WingTraffic — Quản trị</title>
+<meta name="robots" content="noindex" />
+<link rel="stylesheet" href="/ui.css" />
+<style>
+  :root { --s-ok: #10b981; --s-nf: #ef4444; --s-cp: #f59e0b; --s-er: #9ca3af; }
+  @media (prefers-color-scheme: dark) { :root { --s-ok: #34d399; --s-nf: #f87171; --s-cp: #fbbf24; --s-er: #6b7280; } }
+  html[data-theme="light"] { --s-ok: #10b981; --s-nf: #ef4444; --s-cp: #f59e0b; --s-er: #9ca3af; }
+  html[data-theme="dark"] { --s-ok: #34d399; --s-nf: #f87171; --s-cp: #fbbf24; --s-er: #6b7280; }
+  .full { grid-column: 1 / -1; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+  .stat { border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface-2); }
+  .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .srv-banner { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .srv-banner[hidden] { display: none; }
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 16px; }
+  .status-grid .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
+  .status-grid .v { font-weight: 600; font-size: 13px; word-break: break-word; }
+  .ud-head { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .ud-av { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 700; color: #fff; background: linear-gradient(140deg, var(--primary-btn), #1d4ed8); flex: none; }
+  .ud-id { flex: 1; min-width: 220px; }
+  #tblUdCamps progress { width: 90px; height: 10px; accent-color: var(--ok); vertical-align: middle; }
+  @media (min-width: 901px) { #tblUdCamps th.ctr, #tblUdCamps td.ctr { text-align: center; } }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+  .notif { border-bottom: 1px solid var(--border-2); padding: 10px 0; }
+  .notif:last-child { border-bottom: 0; }
+  .notif b { font-size: 13.5px; }
+  .notif .at { color: var(--muted); font-size: 12px; }
+  .notif.unread { background: var(--row); border-radius: var(--radius-xs); padding-left: 8px; }
+  .live { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  #chart svg { display: block; }
+  #liveEvents { max-height: 200px; }
+  #editCard .sheet { max-width: 760px; }
+  #editCard footer { flex-wrap: wrap; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .pin-links { border-left: 4px solid var(--primary); }
+  .pin-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .pin-lb { width: 150px; font-weight: 600; font-size: 13px; flex: none; }
+  .pin-in { flex: 1; min-width: 220px; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  @media (max-width: 600px) { .pin-lb { width: 100%; } }
+</style>
+</head>
+<body class="has-shell">
+<aside class="app-side" id="appSide" aria-label="Menu quản trị">
+  <a class="sb-brand" href="/admin"><img class="lg-img" src="/logo-icon.png" alt="" width="30" height="30"><span>Wing<em class="wt-b">Traffic</em><small>Quản trị</small></span></a>
+  <a class="sn" href="#tong-quan" data-nav="tong-quan"><span class="ic">📊</span>Tổng quan</a>
+  <div class="sn-group" data-group="chien-dich">
+    <button class="sn" type="button" data-toggle><span class="ic">📢</span>Chiến dịch<span class="caret">▶</span><span class="sn-badge" id="snPendBadge" hidden></span></button>
+    <div class="sn-sub">
+      <a class="sn" href="#cho-duyet" data-nav="cho-duyet">Chờ duyệt</a>
+      <a class="sn" href="#chien-dich" data-nav="chien-dich">Tất cả chiến dịch</a>
+    </div>
+  </div>
+  <div class="sn-group" data-group="tai-khoan">
+    <button class="sn" type="button" data-toggle><span class="ic">👥</span>Tài khoản &amp; Ví<span class="caret">▶</span></button>
+    <div class="sn-sub">
+      <a class="sn" href="#tai-khoan" data-nav="tai-khoan">Tài khoản</a>
+      <a class="sn" href="#nap-tien" data-nav="nap-tien">Nạp tiền &amp; ví nhận tiền</a>
+      <a class="sn" href="#giao-dich" data-nav="giao-dich">Sổ giao dịch</a>
+    </div>
+  </div>
+  <div class="sn-group" data-group="he-thong">
+    <button class="sn" type="button" data-toggle><span class="ic">🧰</span>Hệ thống<span class="caret">▶</span><span class="sn-badge" id="snNotifBadge" hidden></span></button>
+    <div class="sn-sub">
+      <a class="sn" href="#thong-bao" data-nav="thong-bao">Thông báo</a>
+      <a class="sn" href="#nhat-ky" data-nav="nhat-ky">Nhật ký thao tác</a>
+      <a class="sn" href="#may-phu" data-nav="may-phu">Máy phụ<span class="sn-badge" id="snAgentBadge" hidden></span></a>
+      <a class="sn" href="#may-chu" data-nav="may-chu">Máy chủ<span class="sn-badge" id="snSrvBadge" hidden></span></a>
+    </div>
+  </div>
+  <div class="sb-label">Công cụ</div>
+  <a class="sn" href="/campaign"><span class="ic">⚙</span>Cấu hình chạy</a>
+  <a class="sn" href="/test"><span class="ic">▶</span>Chạy thử</a>
+  <a class="sn" href="/my"><span class="ic">👤</span>Giao diện người dùng</a>
+</aside>
+<div class="app-back" id="sideBack"></div>
+
+<header class="app-top">
+  <button class="tbtn" id="sideToggle" type="button" aria-label="Ẩn/hiện menu">☰</button>
+  <span class="sp"></span>
+  <button class="tbtn" id="wtTheme" type="button" aria-label="Đổi chế độ hiển thị" style="font-size:16px"></button>
+  <span class="uchip"><span class="av" id="userAv">?</span><span class="who2"><span id="userName">…</span><small id="userRole"></small></span></span>
+  <button class="out" id="btnLogout" type="button">Đăng xuất</button>
+</header>
+
+<main class="main app-content">
+  <div class="crumbs"><a href="#tong-quan">Trang chủ</a> / <span id="crumbTitle">Tổng quan</span></div>
+
+  <section class="view" data-view="tong-quan" id="v-tong-quan">
+    <h1 class="view-title">Tổng quan hệ thống</h1>
+    <div class="alert warn srv-banner" id="srvBanner" hidden>
+      <span id="srvBannerText" style="flex:1;min-width:220px"></span>
+      <button class="btn sm amber" id="btnSrvRestart2" type="button">↻ Khởi động lại server</button>
+    </div>
+    <div class="card panel pin-links" style="margin-bottom:16px">
+      <div class="card-head"><h2>📌 Đường link tài khoản người dùng</h2></div>
+      <div class="pin-row"><span class="pin-lb">Đăng nhập / đăng ký</span><input class="pin-in" id="pinLogin" readonly spellcheck="false" /><a class="btn sm" id="pinLoginGo" target="_blank" rel="noopener">Mở</a><button class="btn sm" type="button" data-copy="#pinLogin" data-copy-label="link đăng nhập">Sao chép</button></div>
+      <div class="pin-row"><span class="pin-lb">Giới thiệu</span><input class="pin-in" id="pinIntro" readonly spellcheck="false" /><a class="btn sm" id="pinIntroGo" target="_blank" rel="noopener">Mở</a><button class="btn sm" type="button" data-copy="#pinIntro" data-copy-label="link giới thiệu">Sao chép</button></div>
+      <div class="pin-row"><span class="pin-lb">Bảng giá</span><input class="pin-in" id="pinPrice" readonly spellcheck="false" /><a class="btn sm" id="pinPriceGo" target="_blank" rel="noopener">Mở</a><button class="btn sm" type="button" data-copy="#pinPrice" data-copy-label="link bảng giá">Sao chép</button></div>
+      <div class="hint" style="margin-top:8px">Gửi link <b>Đăng nhập / đăng ký</b> cho khách. Khách dùng qua tên miền; quản trị chỉ làm trên máy RDP.</div>
+    </div>
+    <div class="tiles t5" id="tiles"></div>
+
+    <div class="sec-title">Doanh thu <span class="u" id="revNote"></span></div>
+    <div class="tiles t5" id="revTiles"></div>
+    <div class="card panel" style="margin-top:12px">
+      <div class="card-head"><h2>Top khách chạy nhiều nhất (30 ngày qua)</h2></div>
+      <div class="tbl-wrap stack"><table id="tblTopUsers" class="tbl-stack">
+        <thead><tr><th>#</th><th>Khách</th><th class="num">Lượt thành công</th><th class="num">Doanh thu</th><th class="num">Tỷ trọng</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="hint">Doanh thu = tiền đã trừ từ ví khách theo từng lượt thành công. “Tiền nạp” = tiền khách đã chuyển vào.</div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="live">
+        <span><i class="dot" id="dotRun"></i> <span id="liveText">Đang kết nối…</span></span>
+        <span id="badgeBox"></span>
+        <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn sm green" id="btnStartAll" type="button">▶ Bật mọi chiến dịch đã duyệt</button>
+          <button class="btn sm danger" id="btnStopAll" type="button">■ Tạm dừng tất cả</button>
+          <button class="btn sm" id="btnReload" type="button">↻ Tải lại</button>
+        </span>
+      </div>
+      <div class="msg" id="liveMsg" role="status"></div>
+    </div>
+
+    <div class="sec-title">Traffic toàn hệ thống</div>
+    <div class="card panel">
+      <div class="filters" style="margin-bottom:10px">
+        <select id="chartDays" style="max-width:150px"><option value="7">7 ngày</option><option value="30" selected>30 ngày</option><option value="90">90 ngày</option></select>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--s-ok)"></i>ok</span>
+        <span><i style="background:var(--s-nf)"></i>không thấy URL</span>
+        <span><i style="background:var(--s-cp)"></i>captcha</span>
+        <span><i style="background:var(--s-er)"></i>lỗi</span>
+      </div>
+      <div id="chart"></div>
+      <div class="tbl-wrap" style="margin-top:12px"><table id="tblDaily">
+        <thead><tr><th>Ngày</th><th class="num">Tổng lượt</th><th class="num">Thành công (ok)</th><th class="num">Không thấy URL</th><th class="num">Captcha</th><th class="num">Lỗi</th><th class="num">Tỷ lệ ok</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="sec-title">Đang chạy <span class="u" id="liveAt"></span></div>
+    <div class="card panel">
+      <div class="tbl-wrap"><table id="tblWorkers">
+        <thead><tr><th>Luồng</th><th>Chủ sở hữu</th><th>Từ khóa</th><th>Bước</th><th class="num">Đã chạy</th><th>IP</th><th class="num">RAM/CPU</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <details class="note" style="margin-top:10px">
+        <summary>Nhật ký sự kiện của engine</summary>
+        <div class="note-body"><pre id="liveEvents"></pre></div>
+      </details>
+    </div>
+  </section>
+
+  <section class="view" data-view="cho-duyet" id="v-cho-duyet" hidden>
+    <h1 class="view-title">Chiến dịch chờ duyệt <span class="u" id="pendingCount"></span></h1>
+    <div class="card filters">
+      <input type="search" id="pendSearch" placeholder="Lọc theo từ khóa / người gửi…" aria-label="Lọc chiến dịch chờ duyệt" style="width:280px" />
+      <button class="btn green" id="btnApproveSel" type="button" disabled>Duyệt đã chọn (0)</button>
+    </div>
+    <div class="card panel" style="margin-top:14px">
+      <div class="tbl-wrap stack"><table id="tblPending" class="tbl-stack">
+        <thead><tr><th style="width:34px"><input type="checkbox" id="pendAll" aria-label="Chọn tất cả chiến dịch đang hiện" style="width:auto;min-height:0" /></th><th>#</th><th>Chủ sở hữu</th><th>Từ khóa / URL</th><th>Loại</th><th class="num">Chỉ tiêu</th><th>Thao tác</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="msg" id="pendMsg" style="margin-top:8px"></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="chien-dich" id="v-chien-dich" hidden>
+    <h1 class="view-title">Tất cả chiến dịch</h1>
+    <div class="card filters">
+      <input type="text" id="fq" placeholder="Tìm từ khóa / URL / tên" style="width:240px" />
+      <select id="fApproval">
+        <option value="">Mọi trạng thái duyệt</option><option value="pending">chờ duyệt</option>
+        <option value="approved">đã duyệt</option><option value="rejected">từ chối</option>
+      </select>
+      <select id="fStatus">
+        <option value="">Mọi trạng thái chạy</option><option value="running">đang chạy</option>
+        <option value="paused">tạm dừng</option><option value="idle">chưa chạy</option>
+        <option value="done">đủ chỉ tiêu</option><option value="stopped">đã dừng</option>
+      </select>
+      <button class="btn" id="btnFilter" type="button">Lọc</button>
+    </div>
+    <div class="card panel" style="margin-top:14px">
+      <div class="tbl-wrap stack"><table id="tblCampaigns" class="tbl-stack">
+        <thead><tr><th>#</th><th>Chủ sở hữu</th><th>Từ khóa / URL</th><th>Duyệt</th><th>Chạy</th>
+          <th class="num">Chỉ tiêu</th><th class="num">Hôm nay</th><th>Vị trí Google</th><th>Cập nhật vị trí</th><th>Thao tác</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="msg" id="campMsg" style="margin-top:8px"></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="tai-khoan" id="v-tai-khoan" hidden>
+    <h1 class="view-title">Tài khoản người dùng</h1>
+    <div class="card panel">
+      <div class="card-head">
+        <h2>Tạo tài khoản</h2>
+        <div class="card-actions">
+          <input type="search" id="userSearch" placeholder="Lọc theo tên đăng nhập…" aria-label="Lọc tài khoản" />
+        </div>
+      </div>
+      <div class="fields" style="margin-bottom:10px">
+        <div><label for="uName">Tên đăng nhập</label><input type="text" id="uName" placeholder="vd: user1" /></div>
+        <div><label for="uPass">Mật khẩu (≥ 8 ký tự)</label><input type="text" id="uPass" /></div>
+        <div><label for="uRole">Vai trò</label><select id="uRole"><option value="user">user</option><option value="admin">admin</option></select></div>
+        <div style="align-self:end"><button class="btn primary" id="btnCreateUser">Tạo tài khoản</button></div>
+      </div>
+      <details class="note" style="margin-bottom:10px">
+        <summary>Ghi chú: chạy song song admin + user, đổi vai trò, giới hạn khi tạo</summary>
+        <div class="note-body">
+          <div>Chạy <b>song song admin + user</b>: giữ cửa sổ này là admin, mở thêm <b>cửa sổ ẩn danh</b> (Ctrl+Shift+N) — hoặc
+          trình duyệt khác — rồi đăng nhập tài khoản <b>user</b>; mỗi cửa sổ một phiên riêng nên test được cả 2 tính năng
+          cùng lúc. Đổi vai trò ở bảng dưới có hiệu lực <b>ngay</b> với mọi phiên đang mở. Tài khoản của chính bạn cũng
+          đổi được, trừ khi nó là admin hoạt động duy nhất (khi đó lấy lại quyền bằng
+          <code>npm run seed:admin -- &lt;tên&gt; --role admin</code>).</div>
+          <div>Tài khoản tạo ở đây dùng được ngay. <b>Không còn hạn mức "số chiến dịch chạy đồng thời"</b>: engine chạy
+          hết số chiến dịch đã duyệt khi còn <b>Số luồng tối đa</b> và đủ RAM. Chống spam khi tạo: mỗi tài khoản giữ
+          tối đa <code>3</code> chiến dịch chờ duyệt và <code>50</code> chiến dịch tổng cộng.</div>
+        </div>
+      </details>
+      <div class="msg" id="userMsg"></div>
+      <div class="tbl-wrap stack"><table id="tblUsers" class="tbl-stack">
+        <thead><tr><th>#</th><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th>
+          <th class="num">Chiến dịch</th><th class="num">Lượt hôm nay</th>
+          <th class="num">Số dư</th><th class="num">Đã chạy</th><th>Thao tác</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="tai-khoan-chi-tiet" id="v-tai-khoan-chi-tiet" hidden>
+    <p class="u" style="margin:0 0 4px"><a href="#tai-khoan">← Danh sách tài khoản</a></p>
+    <h1 class="view-title" id="udTitle">Chi tiết tài khoản</h1>
+    <div class="msg" id="udMsg" role="status"></div>
+    <div class="card panel" id="udHead"></div>
+    <div class="tiles t5" id="udTiles" style="margin-top:14px"></div>
+
+    <div class="sec-title">Tiến độ từng chiến dịch</div>
+    <div class="card panel">
+      <div class="tbl-wrap stack"><table id="tblUdCamps" class="tbl-stack">
+        <thead><tr><th>#</th><th>Chiến dịch</th><th>Loại</th><th>Trạng thái</th><th class="ctr">Hôm nay (thành công / chỉ tiêu)</th><th class="num">Tổng thành công</th><th class="num">Đã chi</th><th>Vị trí Google</th><th>Lượt gần nhất</th><th>Thao tác</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="hint">“Hôm nay” đếm lượt <b>thành công</b> trong ngày so với chỉ tiêu mỗi ngày. “Tổng thành công” cộng dồn từ khi chiến dịch bắt đầu chạy.</div>
+    </div>
+
+    <div class="sec-title">Traffic 30 ngày gần nhất</div>
+    <div class="card panel">
+      <div class="legend">
+        <span><i style="background:var(--s-ok)"></i>ok</span>
+        <span><i style="background:var(--s-nf)"></i>không thấy URL</span>
+        <span><i style="background:var(--s-cp)"></i>captcha</span>
+        <span><i style="background:var(--s-er)"></i>lỗi</span>
+      </div>
+      <div id="udChart"></div>
+      <div class="tbl-wrap" style="margin-top:12px"><table id="tblUdDaily">
+        <thead><tr><th>Ngày</th><th class="num">Tổng lượt</th><th class="num">Thành công</th><th class="num">Không thấy URL</th><th class="num">Lỗi</th><th class="num">Chi phí</th><th class="num">Tỷ lệ ok</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="sec-title">Giao dịch gần đây</div>
+    <div class="card panel">
+      <div class="tbl-wrap stack"><table id="tblUdTxn" class="tbl-stack">
+        <thead><tr><th>Ngày</th><th>Mã</th><th>Loại</th><th class="num">Số tiền</th><th class="num">Số dư sau</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="sec-title">Lượt chạy gần đây</div>
+    <div class="card panel">
+      <div class="tbl-wrap stack"><table id="tblUdRuns" class="tbl-stack">
+        <thead><tr><th>Thời gian</th><th>Từ khóa</th><th>Kết quả</th><th>Thiết bị</th><th class="num">Giây</th><th class="num">Vị trí</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="nap-tien" id="v-nap-tien" hidden>
+    <h1 class="view-title">Nạp tiền &amp; ví nhận tiền</h1>
+    <div class="grid">
+      <div class="card panel">
+        <div class="card-head"><h2>Nạp tiền &amp; điều chỉnh số dư</h2></div>
+        <div class="fields">
+          <div><label for="payUser">Tài khoản nhận</label><select id="payUser"></select></div>
+          <div><label for="topUsdt">Số USDT nhận được</label><input type="number" id="topUsdt" min="0" step="0.01" placeholder="vd: 10" /></div>
+          <div><label for="topRate">Tỷ giá (VND / 1 USDT)</label><input type="number" id="topRate" min="1" step="50" /></div>
+          <div><label for="topNote">Ghi chú</label><input type="text" id="topNote" placeholder="vd: mã giao dịch USDT TX123…" /></div>
+          <div class="full"><div class="hint" id="topPreview"></div></div>
+        </div>
+        <div class="row-actions" style="margin-top:10px">
+          <button class="btn primary" id="btnTopup" type="button">Nạp vào số dư</button>
+          <span class="msg" id="topMsg"></span>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--border-2);margin:14px 0" />
+        <div class="fields">
+          <div><label for="adjAmount">Điều chỉnh (VND, âm = trừ)</label><input type="number" id="adjAmount" step="1000" placeholder="vd: -50000" /></div>
+          <div><label for="adjNote">Lý do điều chỉnh</label><input type="text" id="adjNote" placeholder="vd: hoàn tiền lượt lỗi" /></div>
+        </div>
+        <div class="row-actions" style="margin-top:10px">
+          <button class="btn" id="btnAdjust" type="button">Điều chỉnh số dư</button>
+          <span class="msg" id="adjMsg"></span>
+        </div>
+        <div class="hint">
+          Nạp theo <b>số USDT nhận được</b> × tỷ giá; bỏ trống USDT thì hệ thống nạp đúng số VND đã nhập ở ô điều chỉnh.
+          Mỗi lần nạp/điều chỉnh đều ghi vào <b>sổ giao dịch</b> và <b>nhật ký thao tác</b>, đồng thời gửi thông báo cho người dùng.
+        </div>
+      </div>
+
+      <div class="card panel">
+        <div class="card-head">
+          <h2>Ví nhận tiền của quản trị viên</h2>
+          <div class="card-actions"><button class="btn sm primary" id="btnSaveWallet" type="button">Lưu ví nhận tiền</button></div>
+        </div>
+        <p class="u" style="margin:0 0 10px">
+          Người dùng thấy thông tin này khi bấm <b>+ Nạp thêm</b> ở giao diện của họ, để biết chuyển USDT vào đâu. Số USDT nhận được
+          quy đổi theo <b>tỷ giá</b> bên dưới rồi nạp vào số dư của họ.
+        </p>
+        <div class="fields">
+          <div><label for="walletUsdtAddress">Địa chỉ ví USDT</label><input type="text" id="walletUsdtAddress" placeholder="vd: TXxxxxxxxxxxxxxxxxxxxxxxxxxxxx" /></div>
+          <div><label for="walletUsdtNetwork">Mạng USDT</label><select id="walletUsdtNetwork">
+            <option value="TRC20">TRC20 (Tron — phổ biến, phí thấp)</option>
+            <option value="ERC20">ERC20 (Ethereum)</option>
+            <option value="BEP20">BEP20 (BSC)</option>
+            <option value="other">Mạng khác</option>
+          </select></div>
+          <div><label for="walletUsdtRate">Tỷ giá (VND / 1 USDT)</label><input type="number" id="walletUsdtRate" min="1" step="50" /></div>
+          <div><label for="walletBankName">Ngân hàng (tuỳ chọn)</label><input type="text" id="walletBankName" placeholder="vd: Vietcombank" /></div>
+          <div><label for="walletAccountNo">Số tài khoản</label><input type="text" id="walletAccountNo" /></div>
+          <div><label for="walletAccountName">Chủ tài khoản</label><input type="text" id="walletAccountName" /></div>
+          <div class="full"><label for="walletNote">Ghi chú gửi người dùng</label><input type="text" id="walletNote" placeholder="vd: Chuyển xong nhắn Telegram @admin kèm mã giao dịch." /></div>
+        </div>
+        <div class="msg" id="walletMsg"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" data-view="giao-dich" id="v-giao-dich" hidden>
+    <h1 class="view-title">Sổ giao dịch ví <span class="u" id="txnCount"></span></h1>
+    <div class="card filters">
+      <select id="walletUserFilter" aria-label="Lọc theo tài khoản"><option value="">Mọi tài khoản</option></select>
+      <select id="walletKindFilter" aria-label="Lọc loại giao dịch">
+        <option value="">Mọi loại giao dịch</option>
+        <option value="topup">Nạp tiền</option>
+        <option value="spend">Chạy chiến dịch</option>
+        <option value="adjust">Điều chỉnh</option>
+        <option value="bonus">Khuyến mại</option>
+      </select>
+      <button class="btn" id="btnWalletTxns" type="button">Xem</button>
+    </div>
+    <div class="card panel" style="margin-top:14px">
+      <div class="tbl-wrap stack"><table id="tblWallet" class="tbl-stack">
+        <thead><tr><th>Ngày</th><th>Mã giao dịch</th><th>Tài khoản</th><th class="num">Số tiền</th><th class="num">Còn lại</th><th>Chiến dịch</th><th>Ghi chú</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="msg" id="txnMsg" style="margin-top:8px"></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="thong-bao" id="v-thong-bao" hidden>
+    <h1 class="view-title">Thông báo của tôi <span class="u" id="notifCount"></span></h1>
+    <div class="card panel">
+      <div class="row-actions" style="margin:0 0 8px"><button class="btn sm" id="btnReadAll">Đánh dấu đã đọc tất cả</button></div>
+      <div id="notifs"></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="may-phu" id="v-may-phu" hidden>
+    <h1 class="view-title">Máy phụ <span class="u" id="agentCount"></span></h1>
+    <div class="card panel">
+      <div class="card-head"><h2>Cách chạy traffic</h2></div>
+      <div class="fields">
+        <div class="full"><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="localRun" style="width:auto;min-height:0" /> Máy chính này cũng chạy traffic (bỏ chọn = chỉ điều phối, giao toàn bộ lượt cho máy phụ)</label></div>
+      </div>
+      <div class="live" style="margin-top:10px"><span>Tổng số luồng chạy được cùng lúc: <b id="totalThreads">…</b></span><span class="msg" id="localMsg" role="status" style="margin-left:auto"></span></div>
+      <div class="hint" style="margin-top:10px">Máy chính giữ <b>toàn bộ lịch chạy, tính tiền, thống kê, tỉ lệ 70/30</b>. Máy phụ chỉ nhận <b>từng lượt</b>, mở profile OmniLogin của chính nó rồi gửi kết quả về — nên thêm máy phụ không làm lệch số liệu. Máy phụ <b>gọi ra</b> máy chính nên không cần mở cổng.</div>
+    </div>
+
+    <div class="card panel" style="margin-top:16px">
+      <div class="card-head"><h2>Danh sách máy phụ</h2><button class="btn sm" id="btnAgentRefresh" type="button">↻ Làm mới</button></div>
+      <div class="tbl-wrap stack"><table id="tblAgents" class="tbl-stack">
+        <thead><tr><th>Tên</th><th>Trạng thái</th><th class="num">Luồng</th><th class="num">Đang chạy</th><th class="num">Hôm nay</th><th class="num">RAM trống</th><th>OmniLogin</th><th>Lần cuối</th><th>Thao tác</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="msg" id="agentMsg" role="status"></div>
+    </div>
+
+    <div class="card panel" style="margin-top:16px">
+      <div class="card-head"><h2>Thêm máy phụ</h2></div>
+      <div class="fields">
+        <div><label for="agentName">Tên máy phụ</label><input type="text" id="agentName" maxlength="40" placeholder="vd: May phu 1" /></div>
+        <div><label for="agentServer">Địa chỉ máy chính (máy phụ sẽ gọi vào đây)</label><input type="text" id="agentServer" spellcheck="false" placeholder="https://wingtraffic.tech" /></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn primary" id="btnAgentAdd" type="button">+ Tạo máy phụ &amp; lấy khoá</button></div>
+      </div>
+      <div id="agentKeyBox" hidden style="margin-top:14px">
+        <div class="hint" style="margin-bottom:8px"><b>Khoá chỉ hiện MỘT lần.</b> Chép nội dung dưới vào file <code>agent\agent.config.json</code> trên máy phụ (sửa <code>threads</code> và danh sách profile cho đúng máy đó). Mất khoá thì bấm "Đổi khoá".</div>
+        <textarea id="agentCfg" readonly rows="11" spellcheck="false" style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:13px"></textarea>
+        <div class="row-actions" style="margin-top:8px"><button class="btn" id="btnAgentCopy" type="button">Sao chép nội dung</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" data-view="may-chu" id="v-may-chu" hidden>
+    <h1 class="view-title">Máy chủ</h1>
+    <div class="card panel">
+      <div class="live" style="margin-bottom:10px">
+        <span><i class="dot" id="srvDot"></i> <b id="srvState">Đang kiểm tra…</b></span>
+        <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn sm" id="btnSrvRefresh" type="button">↻ Kiểm tra lại</button>
+          <button class="btn sm danger" id="btnSrvRestart" type="button">⏻ Khởi động lại server</button>
+        </span>
+      </div>
+      <div class="status-grid" id="srvInfo"></div>
+      <div id="srvFiles" style="margin-top:12px"></div>
+      <div class="hint" style="margin-top:12px">
+        <b>Code mới</b> = server khởi động sau lần sửa file cuối. <b>Code cũ</b> = có file mã nguồn (.mjs / .env) sửa sau khi server bật — cần khởi động lại để dùng bản mới.
+        File giao diện (HTML/CSS/JS trong <code>public/</code>) luôn là bản mới nhất, chỉ cần Ctrl+F5.<br />
+        Khởi động lại sẽ <b>huỷ các lượt đang chạy dở</b> (không tính tiền) rồi tự chạy tiếp chiến dịch đang bật sau vài giây; trang tự tải lại khi server lên.
+      </div>
+      <div class="msg" id="srvMsg" role="status"></div>
+    </div>
+
+    <div class="card panel" style="margin-top:16px" id="gateCard">
+      <div class="card-head"><h2>Mật khẩu truy cập từ ngoài (tunnel)</h2></div>
+      <div class="live" style="margin-bottom:10px">
+        <span><i class="dot" id="gateDot"></i> <b id="gateState">Đang kiểm tra…</b></span>
+      </div>
+      <div class="fields">
+        <div class="full"><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="gateEnabled" style="width:auto;min-height:0" /> Bật cổng mật khẩu cho khách truy cập từ bên ngoài</label></div>
+        <div>
+          <label for="gatePass">Mật khẩu truy cập mới</label>
+          <input type="text" id="gatePass" autocomplete="off" spellcheck="false" placeholder="để trống = giữ mật khẩu hiện tại" />
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap">
+          <button class="btn" id="btnGateGen" type="button">🎲 Tạo mật khẩu ngẫu nhiên</button>
+          <button class="btn sm" id="btnGateCopy" type="button">Sao chép</button>
+        </div>
+      </div>
+      <div class="row-actions" style="margin-top:10px">
+        <button class="btn primary" id="btnGateSave" type="button">Lưu cài đặt cổng</button>
+        <span class="msg" id="gateMsg" role="status"></span>
+      </div>
+      <div class="hint" style="margin-top:10px">
+        Khách vào qua <b>tunnel / tên miền</b> phải nhập mật khẩu này <b>trước khi thấy bất kỳ trang nào</b> (kể cả trang đăng nhập); nhập đúng thì dùng được <b>12 giờ</b>.
+        Truy cập trực tiếp trên máy RDP (<code>localhost:3300</code>) <b>không bị hỏi</b>.<br />
+        <b>Đổi mật khẩu = mọi khách phải nhập lại.</b> Bật cổng mà chưa đặt mật khẩu thì khách bên ngoài bị <b>chặn hoàn toàn</b>.
+        Mật khẩu chỉ gửi cho khách bằng kênh riêng (tin nhắn); hệ thống chỉ lưu bản băm, không xem lại được.
+        Khi đã có tên miền chính thức và không cần cổng này nữa, bỏ chọn ô bật rồi lưu.
+      </div>
+    </div>
+
+    <div class="card panel" style="margin-top:16px" id="backupCard">
+      <div class="card-head"><h2>Sao lưu dữ liệu</h2></div>
+      <div class="row-actions" style="margin:0 0 10px">
+        <a class="btn primary" id="btnBackupNow" href="/api/server/backup" download>⬇ Tạo &amp; tải bản sao lưu ngay</a>
+        <button class="btn" id="btnBackupReload" type="button">↻ Làm mới danh sách</button>
+      </div>
+      <div class="tbl-wrap stack"><table id="tblBackups" class="tbl-stack">
+        <thead><tr><th>Tên file</th><th>Loại</th><th>Thời điểm</th><th class="num">Dung lượng</th><th>Tải</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="hint" style="margin-top:10px">
+        Server tự sao lưu CSDL (tài khoản, chiến dịch, ví, lịch sử) <b>mỗi 24 giờ</b> vào thư mục <code>data\backups</code>, giữ <b>7 bản</b> tự động và <b>3 bản</b> tải tay mới nhất.
+        Nên tải một bản về máy khác định kỳ. <b>Khôi phục:</b> tắt app, chép file <code>.db</code> đè lên <code>data\omni.db</code> (xoá <code>omni.db-wal</code> và <code>omni.db-shm</code> nếu có), rồi mở lại app.
+      </div>
+    </div>
+  </section>
+
+  <section class="view" data-view="nhat-ky" id="v-nhat-ky" hidden>
+    <h1 class="view-title">Nhật ký thao tác <span class="u" id="auditCount"></span></h1>
+    <div class="card filters">
+      <input type="search" id="auditSearch" placeholder="Lọc theo người thao tác / hành động…" aria-label="Lọc nhật ký" style="width:280px" />
+      <select id="fAuditEntity">
+        <option value="">Mọi đối tượng</option><option value="campaign">chiến dịch</option>
+        <option value="user">tài khoản</option><option value="settings">cấu hình</option>
+      </select>
+      <button class="btn" id="btnAudit" type="button">Xem</button>
+    </div>
+    <div class="card panel" style="margin-top:14px">
+      <div class="tbl-wrap"><table id="tblAudit">
+        <thead><tr><th>Thời gian</th><th>Người thao tác</th><th>Hành động</th><th>Đối tượng</th><th>Ghi chú</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <div class="modal wide" id="editCard" hidden>
+    <div class="sheet">
+      <header>Sửa chiến dịch <span class="u" id="editWho"></span></header>
+      <div class="body">
+        <div class="fields">
+          <div><label for="eKeyword">Từ khóa (chỉ từ khóa — đừng dán URL)</label><input type="text" id="eKeyword" /></div>
+          <div><label for="eUrl">URL đích</label><input type="text" id="eUrl" /></div>
+          <div><label for="eQueryMode">Kiểu truy vấn gõ lên Google</label><select id="eQueryMode"></select></div>
+          <div><label for="eMaxThreads">Luồng chạy song song tối đa</label><select id="eMaxThreads"></select><div class="hint" id="eThreadsHint"></div></div>
+          <div><label for="eType">Loại chiến dịch</label><select id="eType"></select></div>
+          <div><label for="eCount">Số lượt mỗi kỳ</label><input type="number" id="eCount" min="1" max="10000" /></div>
+          <div><label for="eUnit">Đơn vị</label><select id="eUnit"><option value="day">lượt / ngày</option><option value="hour">lượt / giờ</option></select></div>
+          <div><label for="ePriority">Ưu tiên (số lớn chạy trước)</label><input type="number" id="ePriority" min="-100" max="100" /></div>
+          <div><label for="eStart">Bắt đầu</label><input type="datetime-local" id="eStart" /></div>
+          <div><label for="eEnd">Kết thúc</label><input type="datetime-local" id="eEnd" /></div>
+          <div class="full"><label for="eNote">Ghi chú</label><input type="text" id="eNote" /></div>
+        </div>
+      </div>
+      <footer>
+        <span class="msg" id="editMsg" style="margin-right:auto"></span>
+        <button class="btn primary" id="btnSaveEdit">Lưu thay đổi</button>
+        <button class="btn green" id="btnApprove">Duyệt &amp; chạy</button>
+        <button class="btn" id="btnReject">Từ chối</button>
+        <button class="btn danger" id="btnDelete">Xoá hẳn</button>
+        <button class="btn" id="btnCloseEdit">Đóng</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="/ui.js"></script>
+  <script>
+    const UI = window.WingTrafficUI;
+    const $ = id => document.getElementById(id);
+    let META = null, CAMPAIGNS = [], PENDING = [], USERS = [], live = null, editing = null, SUMMARY = null;
+
+    async function api(path, opts = {}) {
+      const init = { credentials: 'same-origin', ...opts };
+      if (opts.body) init.headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      const r = await fetch(path, init);
+      const text = await r.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
+      if (r.status === 401) { location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search)); throw new Error('Phiên đăng nhập đã hết hạn.'); }
+      if (!r.ok) throw new Error((data && data.error) || `HTTP ${r.status}`);
+      return data;
+    }
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const setMsg = (id, text, kind) => { const e = $(id); e.textContent = text || ''; e.className = 'msg' + (kind ? ' ' + kind : ''); };
+    const fromInput = v => (v ? String(v).replace('T', ' ') + ':00' : '');
+    const toInput = v => (v ? String(v).replace(' ', 'T').slice(0, 16) : '');
+    const fmtDay = s => String(s || '').replace(/^(\d{4})-(\d{2})-(\d{2}).*$/, '$3/$2/$1');
+    const BADGE = { pending: 'chờ duyệt', approved: 'đã duyệt', rejected: 'từ chối' };
+    const BADGE_VI = { pending: 'Chờ duyệt', approved: 'Đã duyệt', rejected: 'Từ chối' };
+    const RUN_LABEL = { idle: 'chưa chạy', running: 'đang chạy', paused: 'tạm dừng', done: 'đủ chỉ tiêu hôm nay', stopped: 'đã dừng' };
+    const RUN_VI = { idle: 'Chưa chạy', running: 'Đang chạy', paused: 'Tạm dừng', done: 'Đủ chỉ tiêu', stopped: 'Đã dừng' };
+    const RUN_BTN = { running: ['paused', 'Tạm dừng', 'btn sm amber'], paused: ['running', 'Chạy', 'btn sm primary'], idle: ['running', 'Chạy', 'btn sm primary'], stopped: ['running', 'Chạy lại', 'btn sm primary'], done: ['running', 'Chạy tiếp', 'btn sm'] };
+    const sBtn = (id, status, label, cls) => `<button class="${cls}" data-status="${id}:${status}">${esc(label)}</button>`;
+
+    const VIEWS = {
+      'tong-quan': { title: 'Tổng quan', group: null },
+      'cho-duyet': { title: 'Chờ duyệt', group: 'chien-dich' },
+      'chien-dich': { title: 'Tất cả chiến dịch', group: 'chien-dich' },
+      'tai-khoan': { title: 'Tài khoản', group: 'tai-khoan' },
+      'tai-khoan-chi-tiet': { title: 'Chi tiết tài khoản', group: 'tai-khoan', nav: 'tai-khoan' },
+      'nap-tien': { title: 'Nạp tiền & ví nhận tiền', group: 'tai-khoan' },
+      'giao-dich': { title: 'Sổ giao dịch', group: 'tai-khoan' },
+      'thong-bao': { title: 'Thông báo', group: 'he-thong' },
+      'nhat-ky': { title: 'Nhật ký thao tác', group: 'he-thong' },
+      'may-phu': { title: 'Máy phụ', group: 'he-thong' },
+      'may-chu': { title: 'Máy chủ', group: 'he-thong' },
+    };
+    const HASH_ALIAS = { notifs: 'thong-bao' };
+
+    let RANKS = {};
+
+    const fmtRankAt = s => String(s || '').replace(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2}).*$/, '$4 $3/$2/$1');
+    const rankPos = d => (d && d.position != null ? '#' + d.position : '-');
+    function rankText(id) {
+      const r = RANKS[id] || {};
+      return `<div title="Máy tính">🖥 <b>${rankPos(r.desktop)}</b></div><div title="Điện thoại">📱 <b>${rankPos(r.mobile)}</b></div>`;
+    }
+    function rankTimeText(id) {
+      const r = RANKS[id] || {};
+      const t = d => (d && d.at ? esc(fmtRankAt(d.at)) : '-');
+      return `<div class="u">${t(r.desktop)}</div><div class="u">${t(r.mobile)}</div>`;
+    }
+
+    function paintRanks() {
+      for (const c of CAMPAIGNS) {
+        const el = $('rk' + c.id), tm = $('rt' + c.id);
+        if (el) el.innerHTML = rankText(c.id);
+        if (tm) tm.innerHTML = rankTimeText(c.id);
+      }
+    }
+
+    function bindKeywordSplit(kwId, urlId) {
+      const split = () => {
+        const kw = $(kwId), url = $(urlId);
+        const m = /(?:https?:\/\/|www\.)[^\s]+/i.exec(kw.value);
+        if (!m) return;
+        kw.value = kw.value.split(m[0]).join(' ').replace(/\s+/g, ' ').trim();
+        if (!url.value.trim()) url.value = m[0].replace(/[),.;]+$/, '');
+      };
+      $(kwId).addEventListener('paste', () => setTimeout(split, 0));
+      $(kwId).addEventListener('change', split);
+    }
+
+    function nav(badge) {
+      const unread = badge?.unread ?? (nav.last ? nav.last.unread : 0);
+      const pending = badge?.pending ?? (nav.last ? nav.last.pending : null);
+      nav.last = { unread, pending };
+      UI.setSideBadge('snNotifBadge', unread);
+      UI.setSideBadge('snPendBadge', pending);
+      if (pending) $('pendingCount').textContent = `(${pending} chiến dịch)`;
+    }
+
+    function paintUser() {
+      const me = META?.me || {};
+      $('userName').textContent = me.username || '—';
+      $('userAv').textContent = String(me.username || '?').charAt(0);
+      $('userRole').textContent = 'Quản trị viên';
+    }
+
+    function fillQueryModes() {
+      $('eQueryMode').innerHTML = (META.queryModes || [])
+        .map(m => `<option value="${m.id}" title="${esc(m.desc)}">${esc(m.label)}</option>`).join('');
+    }
+
+    function threadCap() {
+      const perCampaign = Math.max(1, Number(META.maxThreadsPerCampaign) || 30);
+      const engine = Math.max(1, Number((META.engine || {}).threads) || 1);
+      return Math.max(1, Math.min(perCampaign, engine));
+    }
+
+    function fillThreadCaps() {
+      const cap = threadCap();
+      const opts = [];
+      for (let n = 1; n <= cap; n++) opts.push(`<option value="${n}">${n} luồng${n === 1 ? ' (tuần tự — mặc định)' : ''}</option>`);
+      $('eMaxThreads').innerHTML = opts.join('');
+      $('eThreadsHint').textContent = `Tối đa ${cap} luồng cho chiến dịch này`
+        + ` (trần chung của engine: ${(META.engine || {}).threads} luồng — sửa ở trang Cấu hình chạy).`;
+    }
+
+    function fillTypes() {
+      $('eType').innerHTML = META.types.map(t => `<option value="${t.id}">${esc(t.label)}</option>`).join('');
+    }
+
+    async function loadMeta() {
+      META = await api('/api/meta');
+      if (!META.me || META.me.role !== 'admin') { location.href = '/my'; return false; }
+      paintUser();
+      fillTypes();
+      fillQueryModes();
+      fillThreadCaps();
+      nav();
+      return true;
+    }
+
+    const vnd = n => Number(n || 0).toLocaleString('vi-VN') + 'đ';
+    const tile = (cls, ico, value, label, extra = '') => `<div class="tile ${cls}"><b>${value}</b><span>${esc(label)}${extra}</span><i class="ico">${ico}</i></div>`;
+    function paintTiles() {
+      const approved = CAMPAIGNS.filter(c => !c.hidden && c.approval === 'approved');
+      const running = approved.filter(c => c.status === 'running').length;
+      const pending = nav.last && nav.last.pending != null ? nav.last.pending : PENDING.length;
+      const active = USERS.filter(u => u.status === 'active').length;
+      const money = USERS.filter(u => u.role !== 'admin').reduce((s, u) => s + (Number(u.balance) || 0), 0);
+      $('tiles').innerHTML =
+        tile('t-orange', '📣', `${running} / ${approved.length}`, 'Chiến dịch đang chạy')
+        + tile('t-cyan', '⏳', Number(pending || 0).toLocaleString('vi-VN'), 'Chờ duyệt', ' <a class="tbtn2" href="#cho-duyet">Xem</a>')
+        + tile('t-green', '⇄', Number(SUMMARY ? SUMMARY.todayAttempts : 0).toLocaleString('vi-VN'), 'Lượt chạy hôm nay')
+        + tile('t-teal', '👥', `${active} / ${USERS.length}`, 'Tài khoản hoạt động')
+        + tile('t-purple', '＄', vnd(money), 'Tổng số dư của khách');
+    }
+    async function loadSummary() {
+      SUMMARY = (await api('/api/stats/summary')).summary;
+      paintTiles();
+    }
+
+    function footerBadge(c, withBtn) {
+      const f = c.footerCheck || {};
+      const t = { ok: ['p-approved', '✔ Đã cài mã footer'], missing: ['p-rejected', '⚠ Chưa cài mã footer'], error: ['p-pending', '? Chưa kiểm tra được mã footer'] }[f.status] || ['p-idle', '… Chưa kiểm tra mã footer'];
+      const at = f.checkedAt ? ` (kiểm lúc ${new Date(f.checkedAt).toLocaleString('vi-VN')})` : '';
+      return `<div class="cell-sub"><span class="pill ${t[0]}" title="${esc((f.note || '') + at)}">${t[1]}</span>${withBtn ? ` <button class="btn sm" type="button" data-fcheck="${c.id}" title="Tải lại website đích và kiểm tra mã footer">↻ Kiểm tra lại</button>` : ''}${f.status && f.status !== 'ok' && f.note ? `<div class="cell-sub">${esc(f.note)}</div>` : ''}</div>`;
+    }
+    async function recheckFooter(id, btn) {
+      if (btn) { btn.disabled = true; btn.textContent = 'Đang kiểm tra…'; }
+      try {
+        const d = await api(`/api/campaigns/${id}/footer-check`, { method: 'POST', body: '{}' });
+        const f = d.footer || {};
+        UI.toast(f.status === 'ok' ? '✔ Đã thấy mã WingTraffic trên website đích.' : `⚠ ${esc(f.note || 'Chưa thấy mã footer.')}`, f.status === 'ok' ? 'ok' : 'warn', 9000);
+        await refresh();
+      } catch (e) { UI.fail(e.message); if (btn) { btn.disabled = false; btn.textContent = '↻ Kiểm tra lại'; } }
+    }
+
+    function statusActions(c) {
+      const acts = [];
+      const run = RUN_BTN[c.status];
+      if (run && c.approval === 'approved') acts.push(sBtn(c.id, run[0], run[1], run[2]));
+      acts.push(`<button class="btn sm blue" data-edit="${c.id}">Sửa</button>`);
+      if (c.approval === 'pending') {
+        acts.push(`<button class="btn sm green" data-approve="${c.id}">Duyệt</button>`);
+        acts.push(`<button class="btn sm" data-reject="${c.id}">Từ chối</button>`);
+      }
+      return acts.join('');
+    }
+
+    function bindRowActions(tbody) {
+      tbody.querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => openEdit(Number(b.dataset.edit)); });
+      tbody.querySelectorAll('[data-fcheck]').forEach(b => { b.onclick = () => recheckFooter(Number(b.dataset.fcheck), b); });
+      tbody.querySelectorAll('[data-approve]').forEach(b => { b.onclick = () => approve(Number(b.dataset.approve)); });
+      tbody.querySelectorAll('[data-reject]').forEach(b => { b.onclick = () => reject(Number(b.dataset.reject)); });
+      tbody.querySelectorAll('[data-status]').forEach(b => {
+        const [id, status] = b.dataset.status.split(':');
+        b.onclick = () => setStatus(Number(id), status, b);
+      });
+    }
+    function renderPending() {
+      const tb = $('tblPending').tBodies[0];
+      tb.innerHTML = PENDING.length ? PENDING.map(c => {
+        const u = USERS.find(x => x.id === c.userId) || {};
+        return `<tr>
+          <td data-label="Chọn"><input type="checkbox" class="pendChk" value="${c.id}" aria-label="Chọn chiến dịch #${c.id}" style="width:auto;min-height:0" /></td>
+          <td data-label="#">${c.id}</td>
+          <td data-label="Chủ sở hữu">${esc(c.owner || '')}<div class="cell-sub">${esc(u.displayName || '')}</div></td>
+          <td data-label="Từ khóa / URL"><b>${esc(c.keyword)}</b><div class="cell-sub">${esc(c.targetUrl)}</div>${footerBadge(c, true)}${c.queryMode !== 'keyword' ? `<div class="cell-sub">🔍 truy vấn gửi Google: ${esc(c.query)}</div>` : ''}${c.note ?`<div class="cell-sub">📝 ${esc(c.note)}</div>` : ''}</td>
+          <td data-label="Loại">${esc(c.typeLabel)}</td>
+          <td class="num" data-label="Chỉ tiêu">${c.count} lượt/${c.unit === 'hour' ? 'giờ' : 'ngày'}<div class="cell-sub">≈ ${c.perDay}/ngày · 🔀 ${c.maxThreads} luồng</div></td>
+          <td data-label="Thao tác"><div class="row-actions" style="margin:0">${statusActions(c)}</div></td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="7" class="u">Không có chiến dịch nào chờ duyệt.</td></tr>';
+      bindRowActions(tb);
+      syncPendSel();
+      $('pendingCount').textContent = PENDING.length ? `(${PENDING.length} chiến dịch)` : '';
+    }
+
+    function renderCampaigns() {
+      const tb = $('tblCampaigns').tBodies[0];
+      tb.innerHTML = CAMPAIGNS.length ? CAMPAIGNS.map(c => `<tr>
+        <td data-label="#">${c.id}</td>
+        <td data-label="Chủ sở hữu">${esc(c.owner || '')}</td>
+        <td data-label="Từ khóa / URL"><b>${esc(c.keyword)}</b><div class="cell-sub">${esc(c.targetUrl)}</div>${footerBadge(c, true)}${c.queryMode !== 'keyword' ? `<div class="cell-sub">🔍 truy vấn gửi Google: ${esc(c.query)}</div>` : ''}${c.rejectReason ?`<div class="cell-sub" style="color:var(--err)">Lý do: ${esc(c.rejectReason)}</div>` : ''}</td>
+        <td data-label="Duyệt"><span class="pill p-${c.approval}">${esc(BADGE_VI[c.approval] || c.approval)}</span>${c.approvedBy ? `<div class="cell-sub">${esc(c.approvedBy)}</div>` : ''}</td>
+        <td data-label="Chạy"><span class="pill p-${c.status}">${esc(RUN_VI[c.status] || c.status)}</span>${c.hidden ? ' <span class="pill p-idle" title="Khách đã ẩn chiến dịch này">khách đã ẩn</span>' : ''}<div class="cell-sub">ưu tiên ${c.priority}</div></td>
+        <td class="num" data-label="Chỉ tiêu">${c.count} lượt/${c.unit === 'hour' ? 'giờ' : 'ngày'}<div class="cell-sub">≈ ${c.perDay}/ngày · 🔀 ${c.maxThreads} luồng</div></td>
+        <td class="num" data-label="Hôm nay">${c.today.attempts}<div class="cell-sub">ok ${c.today.ok} · captcha ${c.today.captcha} · lỗi ${c.today.error}</div></td>
+        <td id="rk${c.id}" class="nw" data-label="Vị trí Google"></td>
+        <td id="rt${c.id}" class="nw" data-label="Cập nhật vị trí"></td>
+        <td data-label="Thao tác"><div class="row-actions" style="margin:0">${statusActions(c)}</div></td>
+      </tr>`).join('') : '<tr><td colspan="10" class="u">Chưa có chiến dịch nào.</td></tr>';
+      bindRowActions(tb);
+      paintRanks();
+    }
+
+    async function loadCampaigns() {
+      const q = new URLSearchParams({ limit: '500' });
+      if ($('fq').value.trim()) q.set('q', $('fq').value.trim());
+      if ($('fApproval').value) q.set('approval', $('fApproval').value);
+      if ($('fStatus').value) q.set('status', $('fStatus').value);
+      const d = await api('/api/campaigns?' + q.toString());
+      CAMPAIGNS = d.campaigns;
+      RANKS = d.ranks || {};
+      PENDING = CAMPAIGNS.filter(c => c.approval === 'pending' && !c.hidden);
+      renderCampaigns();
+      renderPending();
+      paintTiles();
+    }
+
+    async function loadUsers() {
+      const d = await api('/api/users');
+      USERS = d.users;
+      const meId = META?.me?.id;
+      const adminCount = USERS.filter(x => x.role === 'admin' && x.status === 'active').length;
+      $('tblUsers').tBodies[0].innerHTML = USERS.map(u => {
+        const mine = u.id === meId;
+        const onlyAdmin = mine && u.role === 'admin' && adminCount <= 1;
+        return `<tr>
+        <td data-label="#">${u.id}</td>
+        <td data-label="Tài khoản"><a href="#tai-khoan-chi-tiet/${u.id}" title="Xem chi tiết và tiến độ"><b>${esc(u.username)}</b></a><div class="cell-sub">${esc(u.displayName || '')}</div></td>
+        <td data-label="Vai trò"><span class="pill p-${u.role}">${esc(u.role)}</span>${mine ? `<div class="cell-sub">(bạn${onlyAdmin ? ' · admin duy nhất' : ''})</div>` : ''}</td>
+        <td data-label="Trạng thái"><span class="pill p-${u.status}">${esc(u.status === 'active' ? 'hoạt động' : 'đã khoá')}</span></td>
+        <td class="num" data-label="Chiến dịch">${u.activeCampaigns}<div class="cell-sub">tổng ${u.campaigns}${u.pendingCampaigns ? ` · chờ duyệt ${u.pendingCampaigns}` : ''}</div></td>
+        <td class="num" data-label="Lượt hôm nay">${u.todayRuns}</td>
+        <td class="num" data-label="Số dư"><b>${vnd(u.balance)}</b></td>
+        <td class="num" data-label="Đã chạy">${vnd(u.spent)}</td>
+        <td data-label="Thao tác"><div class="row-actions" style="margin:0">
+          <a class="btn sm primary" href="#tai-khoan-chi-tiet/${u.id}">Quản lý</a>
+          <a class="btn sm" href="/api/export/campaigns.xlsx?userId=${u.id}" download title="Xuất Excel thống kê traffic mọi chiến dịch của tài khoản">⬇ Excel</a>
+          <button class="btn sm green" data-pay="${u.id}">Nạp tiền</button>
+          ${onlyAdmin ? '' : `<button class="btn sm" data-role="${u.id}">${u.role === 'admin' ? 'Thu quyền admin' : 'Cấp quyền admin'}</button>`}
+          <button class="btn sm amber" data-toggle="${u.id}">${u.status === 'active' ? 'Khoá' : 'Mở khoá'}</button>
+          <button class="btn sm" data-pass="${u.id}">Đặt lại mật khẩu</button>
+          <button class="btn sm danger" data-deluser="${u.id}">Xoá</button>
+        </div></td>
+      </tr>`;
+      }).join('');
+      const tb = $('tblUsers').tBodies[0];
+      tb.querySelectorAll('[data-role]').forEach(b => { b.onclick = () => changeRole(Number(b.dataset.role)); });
+      tb.querySelectorAll('[data-toggle]').forEach(b => { b.onclick = () => toggleUser(Number(b.dataset.toggle)); });
+      tb.querySelectorAll('[data-pass]').forEach(b => { b.onclick = () => resetPassword(Number(b.dataset.pass)); });
+      tb.querySelectorAll('[data-deluser]').forEach(b => { b.onclick = () => removeUser(Number(b.dataset.deluser)); });
+      tb.querySelectorAll('[data-pay]').forEach(b => { b.onclick = () => focusTopup(Number(b.dataset.pay)); });
+      fillPayUsers();
+      if (PENDING.length) renderPending();
+      paintTiles();
+    }
+
+    const TXN_LABEL = { topup: 'Nạp tiền', spend: 'Chạy chiến dịch', adjust: 'Điều chỉnh', bonus: 'Khuyến mại' };
+    let WALLET = null;
+
+    function fillWalletForm(w) {
+      WALLET = w;
+      $('walletUsdtAddress').value = w.usdtAddress || '';
+      $('walletUsdtNetwork').value = w.usdtNetwork || 'TRC20';
+      $('walletUsdtRate').value = w.usdtRate;
+      $('walletBankName').value = w.bankName || '';
+      $('walletAccountNo').value = w.accountNo || '';
+      $('walletAccountName').value = w.accountName || '';
+      $('walletNote').value = w.note || '';
+      if (!$('topRate').value) $('topRate').value = w.usdtRate;
+      topPreview();
+    }
+
+    async function loadWallet() {
+      fillWalletForm((await api('/api/settings/wallet')).wallet);
+    }
+
+    async function saveWallet() {
+      const body = {
+        usdtAddress: $('walletUsdtAddress').value.trim(),
+        usdtNetwork: $('walletUsdtNetwork').value,
+        usdtRate: Number($('walletUsdtRate').value),
+        bankName: $('walletBankName').value.trim(),
+        accountNo: $('walletAccountNo').value.trim(),
+        accountName: $('walletAccountName').value.trim(),
+        note: $('walletNote').value.trim(),
+      };
+      const d = await UI.withButton($('btnSaveWallet'), () => api('/api/settings/wallet', { method: 'POST', body: JSON.stringify(body) }));
+      fillWalletForm(d.wallet);
+      setMsg('walletMsg', 'Đã lưu ví nhận tiền — người dùng thấy ngay khi bấm "+ Nạp thêm".', 'ok');
+      await loadWalletTxns();
+    }
+    function fillPayUsers() {
+      const opts = USERS.map(u => `<option value="${u.id}">${esc(u.username)} — ${vnd(u.balance)}</option>`).join('');
+      const keep = $('payUser').value;
+      $('payUser').innerHTML = opts;
+      if (keep && USERS.some(u => String(u.id) === keep)) $('payUser').value = keep;
+      else { const firstUser = USERS.find(u => u.role !== 'admin'); if (firstUser) $('payUser').value = String(firstUser.id); }
+      const keepFilter = $('walletUserFilter').value;
+      $('walletUserFilter').innerHTML = '<option value="">Mọi tài khoản</option>' + opts;
+      if (keepFilter && USERS.some(u => String(u.id) === keepFilter)) $('walletUserFilter').value = keepFilter;
+    }
+
+    function focusTopup(userId) {
+      fillPayUsers();
+      $('payUser').value = String(userId);
+      location.hash = '#nap-tien';
+      setTimeout(() => $('topUsdt').focus(), 50);
+    }
+
+    function topPreview() {
+      const rate = Number($('topRate').value) || 0;
+      const usdt = Number($('topUsdt').value) || 0;
+      $('topPreview').innerHTML = usdt > 0 && rate > 0
+        ? `Sẽ nạp <b>${vnd(Math.round(usdt * rate))}</b> (${usdt} USDT × ${Number(rate).toLocaleString('vi-VN')}đ).`
+        : 'Nhập số USDT nhận được để xem số tiền sẽ nạp vào số dư.';
+    }
+
+    async function topup() {
+      const body = {
+        userId: Number($('payUser').value),
+        usdt: Number($('topUsdt').value) || 0,
+        rate: Number($('topRate').value) || undefined,
+        amountVnd: Number($('adjAmount').value) || 0,
+        note: $('topNote').value.trim(),
+      };
+      const d = await UI.withButton($('btnTopup'), () => api('/api/wallet/topup', { method: 'POST', body: JSON.stringify(body) }));
+      setMsg('topMsg', `Đã nạp ${vnd(d.txn.amount)} (mã ${d.txn.code}). Số dư mới: ${vnd(d.balance)}.`, 'ok');
+      $('topUsdt').value = '';
+      $('topNote').value = '';
+      topPreview();
+      await refresh();
+    }
+
+    async function adjust() {
+      const body = {
+        userId: Number($('payUser').value),
+        amountVnd: Number($('adjAmount').value) || 0,
+        note: $('adjNote').value.trim(),
+      };
+      const d = await UI.withButton($('btnAdjust'), () => api('/api/wallet/adjust', { method: 'POST', body: JSON.stringify(body) }));
+      setMsg('adjMsg', `Đã điều chỉnh ${vnd(body.amountVnd)} (mã ${d.txn.code}). Số dư mới: ${vnd(d.balance)}.`, 'ok');
+      $('adjAmount').value = '';
+      $('adjNote').value = '';
+      await refresh();
+    }
+
+    async function loadWalletTxns() {
+      const q = new URLSearchParams();
+      if ($('walletUserFilter').value) q.set('userId', $('walletUserFilter').value);
+      if ($('walletKindFilter').value) q.set('kind', $('walletKindFilter').value);
+      const d = await api('/api/wallet/transactions' + (q.toString() ? `?${q}` : ''));
+      $('txnCount').textContent = d.items.length ? `(${d.items.length} giao dịch gần nhất)` : '';
+      $('tblWallet').tBodies[0].innerHTML = d.items.length
+        ? d.items.map(t => `<tr>
+            <td data-label="Ngày">${esc(String(t.at).slice(0, 16))}</td>
+            <td data-label="Mã giao dịch"><code>${esc(t.code || '')}</code><div class="cell-sub">${esc(TXN_LABEL[t.kind] || t.kind)}</div></td>
+            <td data-label="Tài khoản">${esc(t.owner || '')}</td>
+            <td class="num" data-label="Số tiền" style="color:${t.amount < 0 ? 'var(--err)' : 'var(--ok)'}"><b>${t.amount > 0 ? '+' : ''}${vnd(t.amount)}</b>${t.usdt ? `<div class="cell-sub">${t.usdt} USDT × ${Number(t.rate || 0).toLocaleString('vi-VN')}</div>` : ''}</td>
+            <td class="num" data-label="Còn lại">${vnd(t.balance_after)}</td>
+            <td data-label="Chiến dịch">${esc(t.campaign_keyword || '—')}</td>
+            <td class="u" data-label="Ghi chú">${esc(t.note || '')}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="7" class="u">Chưa có giao dịch nào.</td></tr>';
+    }
+
+    function openEdit(id) {
+      const c = CAMPAIGNS.find(x => x.id === id);
+      if (!c) return;
+      editing = id;
+      $('editWho').textContent = `#${c.id} · ${c.owner} · ${BADGE[c.approval] || c.approval} / ${RUN_LABEL[c.status] || c.status}`;
+      $('eKeyword').value = c.keyword;
+      $('eUrl').value = c.targetUrl;
+      $('eQueryMode').value = c.queryMode || 'keyword';
+      const capSel = $('eMaxThreads'), want = String(c.maxThreads || 1);
+      if (![...capSel.options].some(o => o.value === want)) {
+        capSel.insertAdjacentHTML('beforeend', `<option value="${want}">${want} luồng (đang đặt)</option>`);
+      }
+      capSel.value = want;
+      if (![...$('eType').options].some(o => o.value === c.type)) $('eType').add(new Option(c.typeLabel || c.type, c.type));
+      $('eType').value = c.type;
+      $('eCount').value = c.count;
+      $('eUnit').value = c.unit;
+      $('ePriority').value = c.priority;
+      $('eStart').value = toInput(c.startAt);
+      $('eEnd').value = toInput(c.endAt);
+      $('eNote').value = c.note || '';
+      $('editCard').hidden = false;
+      setMsg('editMsg', '');
+    }
+    function closeEdit() { $('editCard').hidden = true; editing = null; }
+
+    function editBody() {
+      return {
+        keyword: $('eKeyword').value.trim(), targetUrl: $('eUrl').value.trim(), type: $('eType').value,
+        queryMode: $('eQueryMode').value,
+        maxThreads: Number($('eMaxThreads').value) || 1,
+        count: Number($('eCount').value), unit: $('eUnit').value, priority: Number($('ePriority').value),
+        note: $('eNote').value.trim(), startAt: fromInput($('eStart').value), endAt: fromInput($('eEnd').value),
+      };
+    }
+
+    async function saveEdit() {
+      if (!editing) { setMsg('editMsg', 'Chưa chọn chiến dịch nào.', 'err'); return; }
+      try {
+        const d = await api(`/api/campaigns/${editing}`, { method: 'PATCH', body: JSON.stringify(editBody()) });
+        setMsg('editMsg', `Đã lưu chiến dịch #${d.campaign.id}.`, 'ok');
+        await Promise.all([loadCampaigns(), loadUsers()]);
+      } catch (e) { setMsg('editMsg', e.message, 'err'); }
+    }
+
+    async function approve(id) {
+      try {
+        const d = await api(`/api/campaigns/${id}/approve`, { method: 'POST', body: '{}' });
+        const note = `Đã duyệt chiến dịch #${id} — engine chạy ở nhịp lập lịch kế tiếp.`;
+        setMsg('pendMsg', note, 'ok');
+        UI.ok(note);
+        if (d.footer && d.footer.status !== 'ok') UI.toast(`<strong>⚠ ${d.footer.status === 'missing' ? 'Khách chưa cài mã footer WingTraffic' : 'Chưa kiểm tra được mã footer'}</strong>Chiến dịch #${id}: ${esc(d.footer.note || '')}`, 'warn', 15000);
+        closeEdit();
+        await refresh();
+      } catch (e) { setMsg('pendMsg', e.message, 'err'); UI.fail(e.message); }
+    }
+
+    async function reject(id) {
+      const reason = await UI.prompt({ title: `Từ chối chiến dịch #${id}`, label: 'Lý do từ chối (gửi cho người dùng)', value: 'Chỉ tiêu/từ khóa chưa phù hợp.' });
+      if (reason === null) return;
+      try {
+        await api(`/api/campaigns/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+        setMsg('pendMsg', `Đã từ chối chiến dịch #${id}.`, 'ok');
+        closeEdit();
+        await refresh();
+      } catch (e) { setMsg('pendMsg', e.message, 'err'); UI.fail(e.message); }
+    }
+
+    async function setStatus(id, status, el) {
+      if (el) el.disabled = true;
+      try {
+        await api(`/api/campaigns/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) });
+        setMsg('campMsg', `Chiến dịch #${id} → ${RUN_LABEL[status] || status}.` + (['paused', 'stopped'].includes(status) ? ' Lượt đang chạy dở sẽ được huỷ trong vài giây.' : ''), 'ok');
+        await Promise.all([loadCampaigns(), loadUsers()]);
+      } catch (e) { setMsg('campMsg', e.message, 'err'); } finally { if (el) el.disabled = false; }
+    }
+
+    async function removeHard(id) {
+      if (!(await UI.confirm({ title: 'Xoá vĩnh viễn chiến dịch', text: `Xoá vĩnh viễn chiến dịch #${id} cùng toàn bộ lượt chạy đã ghi? Không khôi phục được.`, okText: 'Xoá vĩnh viễn', danger: true }))) return;
+      try {
+        await api(`/api/campaigns/${id}?hard=1`, { method: 'DELETE' });
+        UI.ok(`Đã xoá chiến dịch #${id}.`);
+        closeEdit();
+        await refresh();
+      } catch (e) { setMsg('editMsg', e.message, 'err'); }
+    }
+
+    async function bulk(run) {
+      setMsg('liveMsg', run ? 'Đang bật mọi chiến dịch đã duyệt…' : 'Đang tạm dừng tất cả…');
+      try {
+        await api(run ? '/api/campaign/start' : '/api/campaign/stop', { method: 'POST', body: '{}' });
+        setMsg('liveMsg', run ? 'Đã bật lại các chiến dịch đã duyệt.' : 'Đã tạm dừng mọi chiến dịch đang chạy.', 'ok');
+        await refresh();
+      } catch (e) { setMsg('liveMsg', e.message, 'err'); }
+    }
+    async function createUser() {
+      setMsg('userMsg', 'Đang tạo…');
+      try {
+        const d = await api('/api/users', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: $('uName').value.trim(), password: $('uPass').value, role: $('uRole').value,
+          }),
+        });
+        setMsg('userMsg', `Đã tạo tài khoản "${d.user.username}" (#${d.user.id}).`, 'ok');
+        $('uName').value = '';
+        $('uPass').value = '';
+        await loadUsers();
+      } catch (e) { setMsg('userMsg', e.message, 'err'); }
+    }
+
+    async function changeRole(id) {
+      const u = USERS.find(x => x.id === id);
+      if (!u) return;
+      const toAdmin = u.role !== 'admin';
+      const mine = u.id === META?.me?.id;
+      let ask = toAdmin
+        ? `Cấp quyền quản trị (admin) cho "${u.username}"?\n\nTài khoản này sẽ duyệt được chiến dịch, cấu hình engine và quản lý mọi tài khoản khác.`
+        : `Thu quyền quản trị của "${u.username}" (chuyển về user)?\n\nTài khoản chỉ còn thao tác trên chiến dịch của mình, vào /admin sẽ bị chuyển về /my.`;
+      if (mine && !toAdmin) {
+        ask += `\n\n⚠ Đây là tài khoản đang đăng nhập: xác nhận xong, cửa sổ này MẤT quyền quản trị ngay lập tức (mọi tab).`
+          + `\nĐể quay lại admin: ở cửa sổ đang đăng nhập tài khoản admin khác bấm "Cấp quyền admin", hoặc chạy:`
+          + `\nnpm run seed:admin -- ${u.username} --role admin`;
+      }
+      if (!(await UI.confirm({ title: toAdmin ? 'Cấp quyền admin' : 'Thu quyền admin', text: ask, okText: toAdmin ? 'Cấp quyền' : 'Thu quyền', danger: !toAdmin }))) return;
+      try {
+        const d = await api(`/api/users/${id}`, { method: 'PATCH', body: JSON.stringify({ role: toAdmin ? 'admin' : 'user' }) });
+        setMsg('userMsg', `Tài khoản "${u.username}" giờ có vai trò ${d.user.role}`
+          + (toAdmin ? ' — đã vào được /admin và /campaign.' : ' — đã mất quyền quản trị.')
+          + (mine && !toAdmin ? ' Cửa sổ này chuyển về giao diện người dùng (/my) — cần quyền lại thì dùng cửa sổ admin khác.' : ''), 'ok');
+        if (mine && !toAdmin) { setTimeout(() => { location.href = '/my'; }, 1200); return; }
+        await loadUsers();
+      } catch (e) { setMsg('userMsg', e.message, 'err'); }
+    }
+
+    async function toggleUser(id) {
+      const u = USERS.find(x => x.id === id);
+      try {
+        await api(`/api/users/${id}`, { method: 'PATCH', body: JSON.stringify({ status: u.status === 'active' ? 'locked' : 'active' }) });
+        setMsg('userMsg', `Tài khoản "${u.username}" ${u.status === 'active' ? 'đã bị khoá (chiến dịch đang chạy bị tạm dừng).' : 'đã mở lại.'}`, 'ok');
+        await refresh();
+      } catch (e) { setMsg('userMsg', e.message, 'err'); }
+    }
+
+    async function resetPassword(id) {
+      const u = USERS.find(x => x.id === id);
+      const pass = await UI.prompt({ title: `Đặt lại mật khẩu cho "${u.username}"`, label: 'Mật khẩu mới (tối thiểu 8 ký tự)' });
+      if (!pass) return;
+      try {
+        await api(`/api/users/${id}`, { method: 'PATCH', body: JSON.stringify({ password: pass }) });
+        setMsg('userMsg', `Đã đổi mật khẩu của "${u.username}".`, 'ok');
+      } catch (e) { setMsg('userMsg', e.message, 'err'); }
+    }
+
+    async function removeUser(id) {
+      const u = USERS.find(x => x.id === id);
+      if (!(await UI.confirm({ title: 'Xoá tài khoản', text: `Xoá tài khoản "${u.username}" và toàn bộ chiến dịch của họ?\n\nXoá xong là MẤT toàn bộ thống kê. Nếu cần giữ lại, bấm “⬇ Xuất Excel” của tài khoản này trước khi xoá.`, okText: 'Xoá tài khoản', danger: true }))) return;
+      try {
+        await api(`/api/users/${id}`, { method: 'DELETE' });
+        setMsg('userMsg', `Đã xoá tài khoản "${u.username}".`, 'ok');
+        await refresh();
+      } catch (e) { setMsg('userMsg', e.message, 'err'); }
+    }
+    async function loadChart() {
+      const q = new URLSearchParams({ days: $('chartDays').value });
+      try {
+        const d = await api('/api/stats/daily?' + q.toString());
+        drawChart($('chart'), d.days, Number($('chartDays').value));
+        drawDaily(d.days);
+      } catch (e) { $('chart').innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+    }
+
+    function drawDaily(rows) {
+      const list = rows.filter(r => Number(r.attempts) > 0).sort((a, b) => (a.day < b.day ? 1 : -1));
+      const sum = k => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+      const rate = (ok, all) => (all ? Math.round((ok / all) * 100) + '%' : '—');
+      const row = (label, r, cls) => `<tr class="${cls || ''}"><td>${label}</td><td class="num">${r.attempts}</td><td class="num s-ok">${r.ok}</td>`
+        + `<td class="num s-notfound">${r.notfound}</td><td class="num s-captcha">${r.captcha}</td><td class="num s-error">${r.error}</td><td class="num">${rate(r.ok, r.attempts)}</td></tr>`;
+      const total = { attempts: sum('attempts'), ok: sum('ok'), notfound: sum('notfound'), captcha: sum('captcha'), error: sum('error') };
+      $('tblDaily').tBodies[0].innerHTML = list.length
+        ? row('Tổng', total, 'tr-total') + list.map(r => row(fmtDay(r.day), r)).join('')
+        : '<tr><td colspan="7" class="u">Chưa có lượt chạy nào trong khoảng thời gian này.</td></tr>';
+    }
+
+    let CHART_LAST = null;
+    function redrawChart() { if (CHART_LAST && CHART_LAST.el.clientWidth) drawChart(CHART_LAST.el, CHART_LAST.rows, CHART_LAST.days); }
+    window.addEventListener('resize', UI.debounce(redrawChart, 200));
+    function drawChart(el, rows, days, remember = true) {
+      if (remember) CHART_LAST = { el, rows, days };
+      const map = new Map(rows.map(r => [r.day, r]));
+      const out = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 86400000).toLocaleDateString('sv-SE');
+        out.push({ day: d, ...(map.get(d) || { ok: 0, notfound: 0, captcha: 0, error: 0, attempts: 0 }) });
+      }
+      const W = Math.max(320, Math.round(el.clientWidth || 960)), H = 200, bw = W / out.length;
+      const max = Math.max(1, ...out.map(r => Number(r.attempts) || 0));
+      const segs = [['ok', 'var(--s-ok)'], ['notfound', 'var(--s-nf)'], ['captcha', 'var(--s-cp)'], ['error', 'var(--s-er)']];
+      let bars = '';
+      out.forEach((r, i) => {
+        let y = H;
+        for (const [k, color] of segs) {
+          const v = Number(r[k]) || 0;
+          if (!v) continue;
+          const h = Math.max(1, (v / max) * (H - 26));
+          y -= h;
+          bars += `<rect x="${(i * bw + bw * 0.15).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${h.toFixed(1)}" fill="${color}"><title>${r.day}: ${v} ${k} (tổng ${r.attempts})</title></rect>`;
+        }
+        const step = Math.max(1, Math.ceil(out.length / Math.max(2, Math.floor(W / 56))));
+        if (i % step === 0) {
+          bars += `<text x="${(i * bw + bw / 2).toFixed(1)}" y="${H + 13}" font-size="${W < 600 ? 12 : 11}" fill="var(--muted)" text-anchor="middle">${r.day.slice(5)}</text>`;
+        }
+      });
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${H + 18}" style="width:100%;height:220px" role="img">${bars}</svg>`
+        + `<div class="hint">Cao nhất ${max} lượt/ngày · tổng ${out.reduce((s, r) => s + (Number(r.attempts) || 0), 0)} lượt trong ${days} ngày</div>`;
+    }
+
+    async function loadNotifs() {
+      const d = await api('/api/notifications?limit=40');
+      $('notifCount').textContent = d.unread ? `(${d.unread} chưa đọc)` : '';
+      $('notifs').innerHTML = d.items.length
+        ? d.items.map(n => `<div class="notif${n.read_at ? '' : ' unread'}"><b>${esc(n.title)}</b> <span class="at">${esc(n.at)}</span>${n.body ? `<div class="u">${esc(n.body)}</div>` : ''}</div>`).join('')
+        : '<div class="u">Chưa có thông báo.</div>';
+      nav({ unread: d.unread, pending: nav.last ? nav.last.pending : null });
+    }
+
+    async function loadAudit() {
+      const q = new URLSearchParams({ limit: '100' });
+      if ($('fAuditEntity').value) q.set('entity', $('fAuditEntity').value);
+      const d = await api('/api/audit?' + q.toString());
+      $('auditCount').textContent = `(${d.items.length} mục)`;
+      $('tblAudit').tBodies[0].innerHTML = d.items.length
+        ? d.items.map(a => `<tr><td class="u">${esc(a.at)}</td><td>${esc(a.actor || '(hệ thống)')}<div class="cell-sub">${esc(a.actor_role || '')}</div></td>
+            <td>${esc(a.action)}</td><td>${esc(a.entity)}${a.entity_id ? ' #' + a.entity_id : ''}</td>
+            <td class="u">${esc(a.note || '')}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="u">Chưa có thao tác nào được ghi.</td></tr>';
+    }
+
+    async function refresh() {
+      await Promise.all([loadCampaigns(), loadUsers(), loadSummary(), loadWallet(), loadWalletTxns(), loadChart(), loadNotifs(), loadAudit(), loadRevenue().catch(() => {})]);
+      if (UD_ID) loadUserDetail(UD_ID).catch(() => {});
+    }
+
+    function paintLive(d) {
+      if (d.type === 'error') return;
+      $('dotRun').className = 'dot ' + (d.running ? 'on' : 'off');
+      $('liveText').textContent = d.running
+        ? `Engine đang chạy · ${d.threads} luồng · ${d.tasks.length} chiến dịch đủ điều kiện${d.inActiveHours ? '' : ' (ngoài khung giờ chạy)'}`
+        : 'Engine đang tạm dừng — duyệt và bật chiến dịch để chạy.';
+      $('liveAt').textContent = `cập nhật ${new Date(d.at).toLocaleTimeString('vi-VN')}`;
+      if (d.badge) { nav(d.badge); paintTiles(); }
+      $('badgeBox').textContent = d.badge ? `chờ duyệt: ${d.badge.pending ?? '—'} · chưa đọc: ${d.badge.unread}` : '';
+      const tb = $('tblWorkers').tBodies[0];
+      tb.innerHTML = (d.workers || []).length
+        ? d.workers.map(w => {
+          const c = CAMPAIGNS.find(x => `db:${x.id}` === w.taskId);
+          return `<tr><td>${w.slot}</td><td>${esc(c ? c.owner : '')}</td><td>${esc(w.keyword)}</td>
+            <td>${esc(w.step)}${w.captchaLeft ? ` <span class="s-captcha">(captcha còn ${w.captchaLeft}s)</span>` : ''}</td>
+            <td class="num">${w.elapsed}s</td><td class="u">${esc(w.ip || '')}</td>
+            <td class="num">${w.res ? `${w.res.ramMB ?? '-'} MB · ${w.res.cpuPct ?? '-'}%` : '—'}</td></tr>`;
+        }).join('')
+        : '<tr><td colspan="7" class="u">Không có luồng nào đang chạy.</td></tr>';
+      $('liveEvents').textContent = (d.events || []).join('\n');
+    }
+    let esConn = null;
+    function connectEvents() {
+      if (esConn || document.hidden) return;
+      const es = esConn = new EventSource('/api/events');
+      es.onmessage = e => {
+        try {
+          live = JSON.parse(e.data);
+          paintLive(live);
+        } catch {}
+      };
+      es.onerror = () => {
+        $('dotRun').className = 'dot off';
+        $('liveText').textContent = 'Đang kết nối lại luồng realtime…';
+      };
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { if (esConn) { esConn.close(); esConn = null; } }
+      else { connectEvents(); if (typeof refresh === 'function') refresh().catch(() => {}); }
+    });
+
+    let SRV = null, restarting = false;
+    const fmtFull = iso => { const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleString('vi-VN'); };
+    const fmtUp = s => { s = Number(s) || 0; const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60); return (d ? d + ' ngày ' : '') + (h || d ? h + ' giờ ' : '') + m + ' phút'; };
+    const SRV_LEGACY = 'Server đang chạy BẢN CŨ chưa có tính năng khởi động lại. Hãy tắt cửa sổ start.bat (hoặc Ctrl+C) rồi mở lại bằng start.bat MỘT LẦN; từ lần sau bấm nút này là được.';
+    async function loadServer() {
+      const r = await fetch('/api/server/status', { credentials: 'same-origin', cache: 'no-store' });
+      if (r.status === 404) {
+        SRV = null;
+        $('srvDot').className = 'dot off';
+        $('srvState').textContent = 'Server đang chạy BẢN CŨ (chưa hỗ trợ nút khởi động lại)';
+        $('srvInfo').innerHTML = '';
+        $('srvFiles').innerHTML = '<div class="alert warn">' + esc(SRV_LEGACY) + '</div>';
+        $('srvBanner').hidden = false;
+        $('srvBannerText').textContent = SRV_LEGACY;
+        $('btnSrvRestart').disabled = $('btnSrvRestart2').disabled = true;
+        UI.setSideBadge('snSrvBadge', 1);
+        return;
+      }
+      if (r.status === 401) { location.replace('/login?next=' + encodeURIComponent(location.pathname)); return; }
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'HTTP ' + r.status);
+      SRV = await r.json();
+      $('btnSrvRestart').disabled = $('btnSrvRestart2').disabled = restarting;
+      const stale = SRV.stale;
+      $('srvDot').className = 'dot ' + (stale ? 'off' : 'on');
+      $('srvState').textContent = stale ? 'Server đang chạy CODE CŨ — có ' + SRV.changed.length + ' file đã sửa sau khi khởi động' : 'Server đang chạy CODE MỚI NHẤT';
+      $('srvInfo').innerHTML = [
+        ['Phiên bản app', SRV.version ? 'v' + SRV.version.replace(/^v/, '') : '—'], ['Khởi động lúc', fmtFull(SRV.bootAt)], ['Đã chạy', fmtUp(SRV.uptimeSec)], ['Tiến trình (PID)', SRV.pid], ['Node.js', SRV.node],
+        ['Chế độ khởi động lại', SRV.supervised ? 'start.bat (cùng cửa sổ)' : 'tiến trình nền (không có cửa sổ nhật ký)'],
+      ].map(([k, v]) => '<div><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>').join('');
+      $('srvFiles').innerHTML = stale
+        ? '<div class="u" style="margin-bottom:4px">File đã sửa sau khi server khởi động:</div><div class="tbl-wrap"><table><thead><tr><th>File</th><th>Sửa lúc</th></tr></thead><tbody>'
+          + SRV.changed.map(f => '<tr><td><code>' + esc(f.file) + '</code></td><td>' + esc(fmtFull(f.at)) + '</td></tr>').join('') + '</tbody></table></div>'
+        : '';
+      $('srvBanner').hidden = !stale;
+      if (stale) $('srvBannerText').textContent = 'Server đang chạy code cũ — ' + SRV.changed.length + ' file mã nguồn đã sửa sau lần khởi động gần nhất (' + SRV.changed.slice(0, 3).map(f => f.file).join(', ') + (SRV.changed.length > 3 ? '…' : '') + '). Khởi động lại để dùng bản mới.';
+      UI.setSideBadge('snSrvBadge', stale ? SRV.changed.length : 0);
+    }
+    async function restartServer() {
+      if (restarting) return;
+      const ok = await UI.confirm({
+        title: 'Khởi động lại server',
+        text: 'Các lượt đang chạy dở sẽ bị huỷ (không tính tiền) và tự chạy tiếp sau vài giây. Trang sẽ tự tải lại khi server lên. Tiếp tục?',
+        okText: 'Khởi động lại', danger: true,
+      });
+      if (!ok) return;
+      restarting = true;
+      if (!SRV) { setMsg('srvMsg', SRV_LEGACY, 'err'); UI.fail(SRV_LEGACY); return; }
+      const oldBoot = SRV.bootAt;
+      try { await api('/api/server/restart', { method: 'POST', body: '{}' }); }
+      catch (e) { restarting = false; setMsg('srvMsg', e.message, 'err'); UI.fail(e.message); return; }
+      location.hash = '#may-chu';
+      setMsg('srvMsg', 'Đang khởi động lại… (thường 5–20 giây)', 'ok');
+      $('srvState').textContent = 'Đang khởi động lại…'; $('srvDot').className = 'dot off';
+      $('btnSrvRestart').disabled = $('btnSrvRestart2').disabled = true;
+      const t0 = Date.now();
+      const timer = setInterval(async () => {
+        try {
+          const st = await fetch('/api/server/status', { credentials: 'same-origin', cache: 'no-store' });
+          if (st.ok && (await st.json()).bootAt !== oldBoot) { clearInterval(timer); location.reload(); return; }
+        } catch {  }
+        if (Date.now() - t0 > 120000) {
+          clearInterval(timer); restarting = false;
+          $('btnSrvRestart').disabled = $('btnSrvRestart2').disabled = false;
+          setMsg('srvMsg', 'Quá 2 phút server chưa lên lại — kiểm tra cửa sổ start.bat (nếu chạy kiểu khác, hãy mở lại app thủ công).', 'err');
+        }
+      }, 2000);
+    }
+
+    let UD_ID = 0, UD_LAST = null;
+    const UD_ST = { ok: 'Thành công', notfound: 'Không thấy URL', captcha: 'Captcha', error: 'Lỗi' };
+
+    function udRankCell(r) {
+      const line = (icon, d) => `<div>${icon} <b>${d && d.position != null ? '#' + d.position : '-'}</b> <span class="u">${d && d.at ? esc(fmtRankAt(d.at)) : ''}</span></div>`;
+      return line('🖥', (r || {}).desktop) + line('📱', (r || {}).mobile);
+    }
+
+    async function loadUserDetail(id) {
+      if (!id) { location.hash = '#tai-khoan'; return; }
+      UD_ID = id;
+      setMsg('udMsg', '');
+      try {
+        const [p, daily, txns, runs] = await Promise.all([
+          api(`/api/users/${id}/progress`),
+          api(`/api/stats/daily?userId=${id}&days=30`),
+          api(`/api/wallet/transactions?userId=${id}&limit=10`),
+          api(`/api/runs?userId=${id}&limit=15`),
+        ]);
+        if (UD_ID !== id) return;
+        paintUserDetail(p, daily.days || [], txns.items || [], runs.runs || []);
+      } catch (e) {
+        setMsg('udMsg', e.message, 'err');
+        if (/không tìm thấy/i.test(e.message)) setTimeout(() => { if (UD_ID === id) location.hash = '#tai-khoan'; }, 1500);
+      }
+    }
+
+    function paintUserDetail(p, days, txns, runs) {
+      const u = p.user, s = p.summary, camps = p.campaigns || [];
+      const mine = u.id === META?.me?.id;
+      $('udTitle').textContent = `Tài khoản: ${u.username}`;
+      $('udHead').innerHTML = `<div class="ud-head">
+        <div class="ud-av">${esc(String(u.username).charAt(0).toUpperCase())}</div>
+        <div class="ud-id">
+          <div><b style="font-size:17px">${esc(u.username)}</b> <span class="pill p-${esc(u.role)}">${esc(u.role)}</span>
+            <span class="pill p-${esc(u.status)}">${u.status === 'active' ? 'hoạt động' : 'đã khoá'}</span>${mine ? ' <span class="u">(tài khoản của bạn)</span>' : ''}</div>
+          <div class="cell-sub">${esc(u.displayName || 'Chưa đặt tên hiển thị')} · tạo ${esc(fmtRankAt(u.createdAt) || '—')} · đăng nhập lần cuối ${esc(fmtRankAt(u.lastLoginAt) || 'chưa từng')}</div>
+        </div>
+        <div class="row-actions" style="margin:0" id="udActions">
+          <a class="btn sm primary" href="/api/export/campaigns.xlsx?userId=${u.id}" download title="Thống kê mọi chiến dịch, từng ngày, từ khi tạo tài khoản">⬇ Xuất Excel</a>
+          <button class="btn sm green" data-ud="pay">Nạp tiền</button>
+          ${mine ? '' : `<button class="btn sm" data-ud="role">${u.role === 'admin' ? 'Thu quyền admin' : 'Cấp quyền admin'}</button>`}
+          ${mine ? '' : `<button class="btn sm amber" data-ud="toggle">${u.status === 'active' ? 'Khoá' : 'Mở khoá'}</button>`}
+          <button class="btn sm" data-ud="pass">Đặt lại mật khẩu</button>
+          ${mine ? '' : '<button class="btn sm danger" data-ud="del">Xoá</button>'}
+        </div>
+      </div>`;
+      $('udActions').querySelectorAll('[data-ud]').forEach(b => { b.onclick = () => udAction(b.dataset.ud, u.id); });
+
+      const approved = camps.filter(c => c.approval === 'approved');
+      const running = approved.filter(c => c.status === 'running').length;
+      $('udTiles').innerHTML =
+        tile('t-orange', '📣', `${running} / ${approved.length}`, 'Chiến dịch đang chạy', ` <small>(tổng ${camps.length}${u.pendingCampaigns ? ` · chờ duyệt ${u.pendingCampaigns}` : ''})</small>`)
+        + tile('t-cyan', '✔', Number(s.todayOk || 0).toLocaleString('vi-VN'), 'Lượt thành công hôm nay', ` <small>(chạy ${Number(s.todayAttempts || 0).toLocaleString('vi-VN')})</small>`)
+        + tile('t-green', '∑', Number(s.totalOk || 0).toLocaleString('vi-VN'), 'Tổng lượt thành công', ` <small>(chạy ${Number(s.totalAttempts || 0).toLocaleString('vi-VN')})</small>`)
+        + tile('t-teal', '＄', vnd(u.balance), 'Số dư còn lại')
+        + tile('t-purple', '＄', vnd(u.spent), 'Đã chi (đã chạy)');
+
+      const tb = $('tblUdCamps').tBodies[0];
+      tb.innerHTML = camps.length ? camps.map(c => {
+        const target = c.perDay || c.count || 1;
+        const pct = Math.min(100, Math.round(((c.today?.ok || 0) / Math.max(1, target)) * 100));
+        return `<tr>
+          <td data-label="#">${c.id}</td>
+          <td data-label="Chiến dịch"><b>${esc(c.keyword)}</b><div class="cell-sub">${esc(c.targetUrl)}</div>${c.rejectReason ? `<div class="cell-sub" style="color:var(--err)">Lý do: ${esc(c.rejectReason)}</div>` : ''}</td>
+          <td data-label="Loại"><span class="nw">${esc(c.typeLabel)}</span><div class="cell-sub">${c.count} lượt/${c.unit === 'hour' ? 'giờ' : 'ngày'} · ≈ ${c.perDay}/ngày</div></td>
+          <td data-label="Trạng thái"><span class="pill p-${esc(c.approval)}">${esc(BADGE_VI[c.approval] || c.approval)}</span> <span class="pill p-${esc(c.status)}">${esc(RUN_VI[c.status] || c.status)}</span>${c.hidden ? ' <span class="pill p-idle">khách đã ẩn</span>' : ''}</td>
+          <td class="ctr" data-label="Hôm nay"><span class="nw"><progress max="100" value="${pct}"></progress> <b>${c.today?.ok || 0}</b> / ${target}</span><div class="cell-sub">đã chạy ${c.today?.attempts || 0} · lỗi ${c.today?.error || 0}</div></td>
+          <td class="num" data-label="Tổng thành công"><b>${Number(c.totalOk || 0).toLocaleString('vi-VN')}</b><div class="cell-sub">/ ${Number(c.totalAttempts || 0).toLocaleString('vi-VN')} lượt</div></td>
+          <td class="num" data-label="Đã chi">${vnd(c.spent)}</td>
+          <td class="nw" data-label="Vị trí Google">${udRankCell(c.ranks)}</td>
+          <td class="nw" data-label="Lượt gần nhất">${c.lastRunAt ? esc(fmtRankAt(c.lastRunAt)) : '<span class="u">chưa chạy</span>'}${c.firstRunAt ? `<div class="cell-sub">từ ${esc(fmtRankAt(c.firstRunAt))}</div>` : ''}</td>
+          <td data-label="Thao tác"><div class="row-actions" style="margin:0">${statusActions(c)}</div></td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="10" class="u">Tài khoản này chưa có chiến dịch nào.</td></tr>';
+      bindRowActions(tb);
+
+      UD_LAST = { rows: days };
+      drawChart($('udChart'), days, 30, false);
+      const list = days.filter(r => Number(r.attempts) > 0 || Number(r.spent) > 0).sort((a, b) => (a.day < b.day ? 1 : -1));
+      const sum = k => days.reduce((x, r) => x + (Number(r[k]) || 0), 0);
+      const rate = (ok, all) => (all ? Math.round((ok / all) * 100) + '%' : '—');
+      const drow = (label, r, cls) => `<tr class="${cls || ''}"><td>${label}</td><td class="num">${r.attempts}</td><td class="num s-ok">${r.ok}</td><td class="num s-notfound">${r.notfound}</td><td class="num s-error">${r.error}</td><td class="num">${vnd(r.spent)}</td><td class="num">${rate(r.ok, r.attempts)}</td></tr>`;
+      $('tblUdDaily').tBodies[0].innerHTML = list.length
+        ? drow('Tổng', { attempts: sum('attempts'), ok: sum('ok'), notfound: sum('notfound'), error: sum('error'), spent: sum('spent') }, 'tr-total') + list.map(r => drow(fmtDay(r.day), r)).join('')
+        : '<tr><td colspan="7" class="u">Chưa có lượt chạy nào trong 30 ngày qua.</td></tr>';
+
+      $('tblUdTxn').tBodies[0].innerHTML = txns.length ? txns.map(t => `<tr>
+          <td data-label="Ngày">${esc(fmtRankAt(t.at))}</td><td data-label="Mã"><code>${esc(t.code || '')}</code></td>
+          <td data-label="Loại">${esc(TXN_LABEL[t.kind] || t.kind)}</td>
+          <td class="num" data-label="Số tiền" style="color:var(${t.amount >= 0 ? '--ok' : '--err'})">${t.amount >= 0 ? '+' : ''}${vnd(t.amount)}</td>
+          <td class="num" data-label="Số dư sau">${vnd(t.balance_after)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="u">Chưa có giao dịch nào.</td></tr>';
+
+      $('tblUdRuns').tBodies[0].innerHTML = runs.length ? runs.map(r => `<tr>
+          <td data-label="Thời gian">${esc(fmtRankAt(r.at))}</td>
+          <td data-label="Từ khóa">${esc(r.keyword || r.campaign_keyword || '')}</td>
+          <td data-label="Kết quả" class="s-${esc(r.status)}">${esc(UD_ST[r.status] || r.status)}${r.impression ? ' · chỉ hiển thị' : ''}</td>
+          <td data-label="Thiết bị">${r.device_kind === 'mobile' ? '📱 di động' : r.device_kind === 'desktop' ? '🖥 máy tính' : '—'}</td>
+          <td class="num" data-label="Giây">${r.seconds ?? '-'}</td><td class="num" data-label="Vị trí">${r.position ?? '-'}</td></tr>`).join('')
+        : '<tr><td colspan="6" class="u">Chưa có lượt chạy nào.</td></tr>';
+    }
+
+    async function udAction(act, id) {
+      if (!USERS.find(x => x.id === id)) await loadUsers();
+      if (act === 'pay') { focusTopup(id); return; }
+      if (act === 'del') {
+        await removeUser(id);
+        if (!USERS.find(x => x.id === id)) { location.hash = '#tai-khoan'; return; }
+      }
+      else if (act === 'role') await changeRole(id);
+      else if (act === 'toggle') await toggleUser(id);
+      else if (act === 'pass') await resetPassword(id);
+      await loadUserDetail(id);
+    }
+    window.addEventListener('resize', UI.debounce(() => { if (UD_LAST && $('udChart') && $('udChart').clientWidth) drawChart($('udChart'), UD_LAST.rows, 30, false); }, 200));
+
+    async function loadRevenue() {
+      const d = await api('/api/stats/revenue');
+      const sp = d.spent, tp = d.topup;
+      const sub = x => ` <small>(${Number(x.count).toLocaleString('vi-VN')} lượt)</small>`;
+      $('revTiles').innerHTML =
+        tile('t-orange', '＄', vnd(sp.today.amount), 'Doanh thu hôm nay', sub(sp.today))
+        + tile('t-cyan', '＄', vnd(sp.last7.amount), 'Doanh thu 7 ngày', sub(sp.last7))
+        + tile('t-green', '＄', vnd(sp.month.amount), 'Doanh thu tháng này', sub(sp.month))
+        + tile('t-teal', '＄', vnd(sp.total.amount), 'Tổng doanh thu', sub(sp.total))
+        + tile('t-purple', '＄', vnd(tp.month.amount), 'Tiền khách nạp tháng này', ` <small>(hôm nay ${vnd(tp.today.amount)})</small>`);
+      const total30 = Math.max((d.byDay || []).reduce((s, r) => s + (Number(r.spent) || 0), 0), (d.top || []).reduce((s, u) => s + (Number(u.spent) || 0), 0));
+      $('tblTopUsers').tBodies[0].innerHTML = d.top.length ? d.top.map((u, i) => `<tr>
+          <td data-label="#">${i + 1}</td>
+          <td data-label="Khách"><a href="#tai-khoan-chi-tiet/${u.userId}"><b>${esc(u.username)}</b></a></td>
+          <td class="num" data-label="Lượt thành công">${Number(u.visits).toLocaleString('vi-VN')}</td>
+          <td class="num" data-label="Doanh thu"><b>${vnd(u.spent)}</b></td>
+          <td class="num" data-label="Tỷ trọng">${total30 ? Math.round((u.spent / total30) * 100) : 0}%</td></tr>`).join('')
+        : '<tr><td colspan="5" class="u">Chưa có doanh thu trong 30 ngày qua.</td></tr>';
+      $('revNote').textContent = `(cập nhật ${new Date().toLocaleTimeString('vi-VN')})`;
+    }
+
+    function pendSelected() { return [...document.querySelectorAll('#tblPending .pendChk:checked')].map(x => Number(x.value)); }
+    function syncPendSel() {
+      const n = pendSelected().length, b = $('btnApproveSel');
+      if (!b) return;
+      b.disabled = n === 0;
+      b.textContent = `Duyệt đã chọn (${n})`;
+      const vis = [...document.querySelectorAll('#tblPending .pendChk')].filter(x => !x.closest('tr').hidden);
+      $('pendAll').checked = vis.length > 0 && vis.every(x => x.checked);
+    }
+    async function approveMany() {
+      const ids = pendSelected();
+      if (!ids.length) return;
+      if (!(await UI.confirm({ title: 'Duyệt hàng loạt', text: `Duyệt ${ids.length} chiến dịch đã chọn? Các chiến dịch sẽ chạy ở nhịp lập lịch kế tiếp.`, okText: `Duyệt ${ids.length} chiến dịch` }))) return;
+      $('btnApproveSel').disabled = true;
+      let okN = 0;
+      const errs = [];
+      const noFooter = [];
+      for (const id of ids) {
+        try { const d = await api(`/api/campaigns/${id}/approve`, { method: 'POST', body: '{}' }); okN++; if (d.footer && d.footer.status !== 'ok') noFooter.push('#' + id); }
+        catch (e) { errs.push(`#${id}: ${e.message}`); }
+      }
+      const note = `Đã duyệt ${okN}/${ids.length} chiến dịch.` + (errs.length ? ' Lỗi: ' + errs.join('; ') : '');
+      setMsg('pendMsg', note, errs.length ? 'err' : 'ok');
+      if (errs.length) UI.fail(note); else UI.ok(note);
+      if (noFooter.length) UI.toast(`<strong>⚠ Chưa thấy mã footer WingTraffic</strong>Chiến dịch: ${noFooter.join(', ')} — xem chi tiết ở mục Thông báo.`, 'warn', 15000);
+      await refresh();
+    }
+
+    async function loadBackups() {
+      const d = await api('/api/server/backups');
+      $('tblBackups').tBodies[0].innerHTML = d.backups.length ? d.backups.map(b => `<tr>
+          <td data-label="Tên file"><code>${esc(b.name)}</code></td>
+          <td data-label="Loại">${b.kind === 'auto' ? 'Tự động' : 'Tải tay'}</td>
+          <td data-label="Thời điểm">${esc(fmtFull(b.at))}</td>
+          <td class="num" data-label="Dung lượng">${(b.size / 1024).toLocaleString('vi-VN', { maximumFractionDigits: 0 })} KB</td>
+          <td data-label="Tải"><a class="btn sm" href="/api/server/backup?name=${encodeURIComponent(b.name)}" download>⬇ Tải</a></td></tr>`).join('')
+        : '<tr><td colspan="5" class="u">Chưa có bản sao lưu nào (bản tự động đầu tiên được tạo sau khi server chạy khoảng vài chục giây).</td></tr>';
+    }
+
+    async function loadGate() {
+      const g = await api('/api/server/gate');
+      $('gateEnabled').checked = !!g.enabled;
+      $('gateDot').className = 'dot ' + (g.enabled && g.hasPassword ? 'on' : 'off');
+      $('gateState').textContent = !g.enabled ? 'Cổng TẮT — khách bên ngoài vào thẳng không cần mật khẩu'
+        : g.hasPassword ? 'Cổng BẬT — khách bên ngoài phải nhập mật khẩu truy cập'
+          : 'Cổng BẬT nhưng CHƯA có mật khẩu — khách bên ngoài đang bị chặn hoàn toàn';
+    }
+    async function saveGate() {
+      const pw = $('gatePass').value.trim();
+      const enabled = $('gateEnabled').checked;
+      if (pw && pw.length < 6) { setMsg('gateMsg', 'Mật khẩu cần ít nhất 6 ký tự.', 'err'); return; }
+      if (pw && !(await UI.confirm({ title: 'Đổi mật khẩu truy cập', text: 'Khách đang dùng tunnel sẽ phải nhập lại mật khẩu mới. Tiếp tục?', okText: 'Lưu mật khẩu' }))) return;
+      try {
+        await api('/api/server/gate', { method: 'POST', body: JSON.stringify({ enabled, password: pw || undefined }) });
+        setMsg('gateMsg', pw ? 'Đã lưu mật khẩu mới. Hãy chép mật khẩu để gửi khách ngay — hệ thống không hiện lại.' : 'Đã lưu cài đặt cổng.', 'ok');
+        if (!pw) $('gatePass').value = '';
+        await loadGate();
+      } catch (e) { setMsg('gateMsg', e.message, 'err'); UI.fail(e.message); }
+    }
+    function randomGatePassword() {
+      const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789', n = 10, out = [];
+      const buf = new Uint32Array(n); crypto.getRandomValues(buf);
+      for (let i = 0; i < n; i++) out.push(chars[buf[i] % chars.length]);
+      return out.join('');
+    }
+
+    const PUBLIC_SITE = 'https://wingtraffic.tech';
+    function paintPinLinks() {
+      const base = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? PUBLIC_SITE : location.origin;
+      for (const [id, path] of [['Login', '/login'], ['Intro', '/gioi-thieu'], ['Price', '/bang-gia']]) {
+        $('pin' + id).value = base + path;
+        $('pin' + id + 'Go').href = base + path;
+      }
+    }
+
+    const AGENT_SERVER_KEY = 'wt-agent-server';
+    function agentConfigText(key) {
+      const server = ($('agentServer').value || '').trim().replace(/\/+$/, '') || 'https://wingtraffic.tech';
+      return JSON.stringify({ server, key, threads: 3, proxy: { mode: 'omni', profiles: ['ten-profile-1', 'ten-profile-2', 'ten-profile-3'], rotateSec: 305 } }, null, 2);
+    }
+    function showAgentKey(key) { $('agentCfg').value = agentConfigText(key); $('agentKeyBox').hidden = false; }
+    async function loadMachines() {
+      const d = await api('/api/machines');
+      $('agentCount').textContent = d.machines.length ? '(' + d.machines.length + ')' : '';
+      if (!$('agentServer').value) { let v = ''; try { v = localStorage.getItem(AGENT_SERVER_KEY) || ''; } catch {} $('agentServer').value = v || (/localhost|127\.0\.0\.1/.test(d.serverUrl) ? 'https://wingtraffic.tech' : d.serverUrl); }
+      $('localRun').checked = !!d.localRun;
+      const online = d.machines.filter(m => m.online).length;
+      const badge = $('snAgentBadge'); badge.textContent = online + '/' + d.machines.length; badge.hidden = !d.machines.length;
+      const tb = document.querySelector('#tblAgents tbody');
+      tb.innerHTML = d.machines.length ? d.machines.map(m => {
+        const st = !m.enabled ? '<span class="pill p-paused">Đã tắt</span>' : m.online ? '<span class="pill p-running">Online</span>' : '<span class="pill p-stopped">Offline</span>';
+        const last = m.lastSeen ? new Date(m.lastSeen).toLocaleTimeString('vi-VN') : 'chưa kết nối';
+        const omni = m.omniUp === null ? '—' : m.omniUp ? 'Đang chạy' : '<b style="color:#b91c1c">Tắt</b>';
+        const upd = m.outdated === null ? '<div class="u">Chưa rõ bản code (máy phụ bản cũ — cập nhật 1 lần để theo dõi)</div>'
+          : m.outdated.length ? `<div class="u" style="color:#b91c1c"><b>⚠ Cần cập nhật ${m.outdated.length} file:</b> ${m.outdated.map(f => esc(f)).join(', ')}</div>`
+          : '<div class="u" style="color:#047857">✔ Code đã đúng bản mới nhất</div>';
+        return `<tr>
+          <td data-label="Tên"><b>${esc(m.name)}</b>${m.host ? `<div class="u">${esc(m.host)} · v${esc(m.version)}</div>` : ''}${m.host ? upd : ''}</td>
+          <td data-label="Trạng thái">${st}</td>
+          <td class="num" data-label="Luồng">${m.threads || '—'}</td>
+          <td class="num" data-label="Đang chạy">${m.busy}</td>
+          <td class="num" data-label="Hôm nay">${m.today.ok} ✔ / ${m.today.fail} ✖</td>
+          <td class="num" data-label="RAM trống">${m.freeMemMB == null ? '—' : esc(m.freeMemMB) + ' MB'}</td>
+          <td data-label="OmniLogin">${omni}</td>
+          <td data-label="Lần cuối">${esc(last)}</td>
+          <td data-label="Thao tác"><span class="row-actions">
+            <button class="btn sm" data-agent="${esc(m.id)}:enable:${m.enabled ? 0 : 1}">${m.enabled ? 'Tắt' : 'Bật'}</button>
+            <button class="btn sm" data-agent="${esc(m.id)}:key">Đổi khoá</button>
+            <button class="btn sm danger" data-agent="${esc(m.id)}:del">Xoá</button>
+          </span></td></tr>`;
+      }).join('') : '<tr><td colspan="9" class="empty">Chưa có máy phụ nào. Tạo máy phụ ở khung bên dưới.</td></tr>';
+      try { const st = await api('/api/campaign'); $('totalThreads').textContent = st.totalThreads + (st.localRun ? '' : ' (máy chính không chạy)'); } catch {  }
+    }
+    async function agentAction(spec) {
+      const [id, act, arg] = spec.split(':');
+      const name = (document.querySelector('[data-agent^="' + id + ':"]')?.closest('tr')?.querySelector('b')?.textContent) || id;
+      if (act === 'del' && !(await UI.confirm({ title: 'Xoá máy phụ', text: 'Xoá máy phụ "' + name + '"? Lượt đang chạy trên máy đó sẽ bị huỷ.', okText: 'Xoá', danger: true }))) return;
+      if (act === 'key' && !(await UI.confirm({ title: 'Đổi khoá máy phụ', text: 'Đổi khoá máy phụ "' + name + '"? Khoá cũ ngừng dùng được ngay, máy phụ phải cập nhật agent.config.json.', okText: 'Đổi khoá', danger: true }))) return;
+      if (act === 'enable') await api('/api/machines/' + id + '/enable', { method: 'POST', body: JSON.stringify({ enabled: arg === '1' }) });
+      else if (act === 'del') await api('/api/machines/' + id, { method: 'DELETE' });
+      else if (act === 'key') { const d = await api('/api/machines/' + id + '/key', { method: 'POST', body: '{}' }); showAgentKey(d.key); setMsg('agentMsg', 'Đã đổi khoá — chép khoá mới ở khung "Thêm máy phụ" bên dưới (chỉ hiện một lần).', 'ok'); }
+      await loadMachines();
+    }
+
+    (async function init() {
+      try {
+        UI.shell({ views: VIEWS, alias: HASH_ALIAS, def: 'tong-quan', storageKey: 'wt-side', onView: (n, arg) => { if (n === 'tong-quan') redrawChart(); if (n === 'may-phu') loadMachines().catch(e => setMsg('agentMsg', e.message, 'err')); if (n === 'tai-khoan-chi-tiet') loadUserDetail(Number(arg)); else UD_ID = 0; } });
+        if (!(await loadMeta())) return;
+        $('btnSaveEdit').onclick = saveEdit;
+        $('btnApprove').onclick = () => editing && approve(editing);
+        $('btnReject').onclick = () => editing && reject(editing);
+        $('btnDelete').onclick = () => editing && removeHard(editing);
+        $('btnCloseEdit').onclick = closeEdit;
+        $('editCard').addEventListener('click', e => { if (e.target === $('editCard')) closeEdit(); });
+        $('btnStartAll').onclick = () => bulk(true);
+        $('btnStopAll').onclick = () => bulk(false);
+        $('btnReload').onclick = () => refresh().catch(e => setMsg('liveMsg', e.message, 'err'));
+        $('btnFilter').onclick = () => loadCampaigns().catch(e => setMsg('campMsg', e.message, 'err'));
+        $('fq').onkeydown = e => { if (e.key === 'Enter') $('btnFilter').onclick(); };
+        bindKeywordSplit('eKeyword', 'eUrl');
+        $('btnCreateUser').onclick = createUser;
+        $('chartDays').onchange = loadChart;
+        $('btnSrvRestart').onclick = $('btnSrvRestart2').onclick = () => restartServer();
+        $('btnGateSave').onclick = () => saveGate();
+        $('btnGateGen').onclick = () => { $('gatePass').value = randomGatePassword(); setMsg('gateMsg', 'Đã tạo mật khẩu — bấm "Lưu cài đặt cổng" để áp dụng, rồi sao chép gửi khách.', ''); };
+        $('btnGateCopy').onclick = () => { if ($('gatePass').value) UI.copy($('gatePass').value); };
+        loadGate().catch(() => {});
+        $('btnApproveSel').onclick = () => approveMany();
+        $('pendAll').onchange = () => { document.querySelectorAll('#tblPending .pendChk').forEach(x => { if (!x.closest('tr').hidden) x.checked = $('pendAll').checked; }); syncPendSel(); };
+        $('tblPending').addEventListener('change', e => { if (e.target.classList && e.target.classList.contains('pendChk')) syncPendSel(); });
+        $('pendSearch').addEventListener('input', () => setTimeout(syncPendSel, 300));
+        paintPinLinks();
+        $('btnAgentRefresh').onclick = () => loadMachines().catch(e => setMsg('agentMsg', e.message, 'err'));
+        $('btnAgentAdd').onclick = async () => {
+          try {
+            const d = await api('/api/machines', { method: 'POST', body: JSON.stringify({ name: $('agentName').value }) });
+            try { localStorage.setItem(AGENT_SERVER_KEY, $('agentServer').value.trim()); } catch {}
+            $('agentName').value = ''; showAgentKey(d.key); setMsg('agentMsg', 'Đã tạo máy phụ "' + d.machine.name + '". Chép nội dung khoá bên dưới sang máy phụ.', 'ok');
+            await loadMachines();
+          } catch (e) { setMsg('agentMsg', e.message, 'err'); }
+        };
+        $('btnAgentCopy').onclick = () => UI.copy($('agentCfg').value);
+        $('agentServer').onchange = () => { try { localStorage.setItem(AGENT_SERVER_KEY, $('agentServer').value.trim()); } catch {} const m = /"key": "([^"]+)"/.exec($('agentCfg').value); if (m) showAgentKey(m[1]); };
+        $('tblAgents').addEventListener('click', e => { const b = e.target.closest('[data-agent]'); if (b) agentAction(b.dataset.agent).catch(err => setMsg('agentMsg', err.message, 'err')); });
+        $('localRun').onchange = async () => {
+          try { await api('/api/campaign', { method: 'POST', body: JSON.stringify({ settings: { localRun: $('localRun').checked } }) }); setMsg('localMsg', $('localRun').checked ? 'Máy chính chạy traffic cùng máy phụ.' : 'Máy chính chỉ điều phối.', 'ok'); await loadMachines(); }
+          catch (e) { $('localRun').checked = !$('localRun').checked; setMsg('localMsg', e.message, 'err'); }
+        };
+        loadMachines().catch(() => {});
+        loadBackups().catch(() => {});
+        $('btnBackupReload').onclick = () => loadBackups().catch(e => setMsg('srvMsg', e.message, 'err'));
+        $('btnBackupNow').addEventListener('click', () => setTimeout(() => loadBackups().catch(() => {}), 2500));
+        $('btnSrvRefresh').onclick = () => loadServer().catch(e => setMsg('srvMsg', e.message, 'err'));
+        loadServer().catch(() => {});
+        $('btnAudit').onclick = () => loadAudit().catch(e => setMsg('liveMsg', e.message, 'err'));
+        $('btnReadAll').onclick = async () => { await api('/api/notifications/read-all', { method: 'POST' }); await loadNotifs(); };
+        $('btnSaveWallet').onclick = () => saveWallet().catch(e => setMsg('walletMsg', e.message, 'err'));
+        $('btnTopup').onclick = () => topup().catch(e => setMsg('topMsg', e.message, 'err'));
+        $('btnAdjust').onclick = () => adjust().catch(e => setMsg('adjMsg', e.message, 'err'));
+        $('btnWalletTxns').onclick = () => loadWalletTxns().catch(e => setMsg('txnMsg', e.message, 'err'));
+        $('topUsdt').oninput = topPreview;
+        $('topRate').oninput = topPreview;
+        $('walletUserFilter').onchange = () => loadWalletTxns().catch(e => setMsg('txnMsg', e.message, 'err'));
+        $('walletKindFilter').onchange = () => loadWalletTxns().catch(e => setMsg('txnMsg', e.message, 'err'));
+        await refresh();
+        connectEvents();
+        UI.filterTable('#pendSearch', '#tblPending');
+        UI.filterTable('#userSearch', '#tblUsers');
+        UI.filterTable('#auditSearch', '#tblAudit');
+        UI.sortTable('#tblCampaigns');
+        UI.sortTable('#tblUsers');
+        UI.bindCopyButtons();
+        setInterval(() => { if (!$('v-may-phu').hidden) loadMachines().catch(() => {}); }, 5000);
+        setInterval(() => { loadUsers().catch(() => {}); loadNotifs().catch(() => {}); if (!restarting) loadServer().catch(() => {}); }, 60000);
+      } catch (e) {
+        setMsg('liveMsg', e.message, 'err');
+        UI.fail(e.message);
+      }
+    })();
+  </script>
+</main>
+</body>
+</html>

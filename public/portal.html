@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WingTraffic — Đăng ký &amp; đăng nhập</title>
+<meta name="description" content="WingTraffic: đăng ký tài khoản và quản lý chiến dịch của bạn." />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="author" content="WingTraffic" />
+<link rel="canonical" href="{{PUBLIC_URL}}/gioi-thieu" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="WingTraffic" />
+<meta property="og:locale" content="vi_VN" />
+<meta property="og:title" content="WingTraffic — Đăng ký &amp; đăng nhập" />
+<meta property="og:description" content="Đăng ký tài khoản và quản lý chiến dịch." />
+<meta property="og:url" content="{{PUBLIC_URL}}/gioi-thieu" />
+<meta name="twitter:card" content="summary" />
+<meta name="theme-color" content="#2563eb" />
+<link rel="stylesheet" href="/ui.css" />
+<style>
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  header.top { position: sticky; top: 0; z-index: 30; background: var(--card); border-bottom: 1px solid var(--border); }
+  header.top .wrap { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; }
+  .brand { display: flex; gap: 9px; align-items: center; font-weight: 700; font-size: 16px; }
+  .brand .mark-img { width: 28px; height: 28px; border-radius: 8px; flex: none; display: block; }
+    width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; flex: none;
+    background: linear-gradient(140deg, var(--primary), #1d4ed8); color: #fff; font-weight: 800; font-size: 14px;
+  }
+  nav.top-nav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  nav.top-nav a { text-decoration: none; font-size: 13px; padding: 6px 11px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); }
+  nav.top-nav a:hover { background: var(--surface-2); text-decoration: none; }
+  nav.top-nav a.cta { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+  .hero { background: linear-gradient(135deg, #1e3a8a, #2563eb 55%, #38bdf8); color: #fff; padding: 38px 0 32px; margin-bottom: 22px; }
+  .hero h1 { font-size: 27px; line-height: 1.28; max-width: 800px; }
+  .hero p { margin-top: 10px; max-width: 760px; color: #e0edff; font-size: 15px; }
+  .hero .row-actions { margin-top: 18px; }
+  .hero .btn { background: #fff; border-color: #fff; color: #1d4ed8; }
+  .hero .btn.ghost { background: transparent; border-color: rgba(255,255,255,.6); color: #fff; }
+  h3 { font-size: 15px; margin: 0 0 8px; }
+  .lead { color: var(--muted); font-size: 14px; }
+  .grid.g2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 860px) { .grid.g2 { grid-template-columns: 1fr; } }
+  .notebox { background: var(--surface-2); border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--muted); margin-top: 12px; }
+  footer.site { border-top: 1px solid var(--border); margin-top: 26px; padding: 18px 0 40px; color: var(--muted); font-size: 13px; }
+  footer.site .wrap { display: flex; gap: 14px; flex-wrap: wrap; justify-content: space-between; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/gioi-thieu" style="text-decoration:none"><img class="mark-img" src="/logo-icon.png" alt="" width="28" height="28"><strong class="bt">Wing<em class="wt-b">Traffic</em></strong></a>
+    <nav class="top-nav">
+      <a href="#dang-ky" class="cta">Đăng ký</a>
+      <a href="/login">Đăng nhập</a>
+      <button class="btn sm icon" id="wtTheme" type="button" aria-label="Đổi chế độ sáng/tối"></button>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>Quản lý chiến dịch của bạn tại một nơi</h1>
+    <p>Tạo tài khoản để xem chi tiết dịch vụ, bảng giá và bắt đầu chiến dịch đầu tiên.</p>
+    <div class="row-actions">
+      <a class="btn" href="#dang-ky">Đăng ký</a>
+      <a class="btn ghost" href="/login">Đăng nhập</a>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="grid g2">
+    <div class="card">
+      <h3 id="dang-ky">Đăng ký tài khoản</h3>
+      <div class="msg" id="reg-msg" role="status" aria-live="polite"></div>
+      <form id="reg-form" autocomplete="on">
+        <div class="field">
+          <label for="r-user">Tên đăng nhập *</label>
+          <input id="r-user" name="username" type="text" minlength="3" maxlength="32" pattern="[a-zA-Z0-9._\-]{3,32}" autocomplete="username" placeholder="vd: nguyenvana" required />
+        </div>
+        <div class="field">
+          <label for="r-name">Tên hiển thị (không bắt buộc)</label>
+          <input id="r-name" name="displayName" type="text" maxlength="80" autocomplete="name" placeholder="vd: Nguyễn Văn A" />
+        </div>
+        <div class="field">
+          <label for="r-pass">Mật khẩu * (tối thiểu 8 ký tự)</label>
+          <input id="r-pass" name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password" required />
+        </div>
+        <div class="field">
+          <label for="r-pass2">Nhập lại mật khẩu *</label>
+          <input id="r-pass2" name="passwordConfirm" type="password" minlength="8" maxlength="72" autocomplete="new-password" required />
+        </div>
+        <div class="row-actions">
+          <button class="btn primary" id="reg-btn" type="submit">Đăng ký</button>
+          <a class="btn" href="/login">Tôi đã có tài khoản</a>
+        </div>
+      </form>
+      <div class="notebox" id="reg-note">Tên đăng nhập: 3–32 ký tự, chỉ gồm chữ, số và <code>. _ -</code>.</div>
+    </div>
+    <div class="card">
+      <h3>Đã có tài khoản?</h3>
+      <p class="lead">Đăng nhập để tạo chiến dịch, theo dõi tiến độ và xem thống kê.</p>
+      <div class="row-actions" style="margin-top:12px">
+        <a class="btn primary" href="/login">Đăng nhập</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div>© WingTraffic</div>
+    <div><a href="#dang-ky">Đăng ký</a> · <a href="/login">Đăng nhập</a></div>
+  </div>
+</footer>
+
+<script src="/ui.js"></script>
+<script>
+  var UI = window.WingTrafficUI;
+  var $ = function (id) { return document.getElementById(id); };
+
+  (function () { var b = document.getElementById('wtTheme'); UI.theme(); if (b) b.addEventListener('click', function () { UI.themeButton(); }); })();
+
+  var regMsg = $('reg-msg');
+  function regSay(text, cls) { regMsg.textContent = text || ''; regMsg.className = 'msg ' + (cls || ''); }
+
+  $('reg-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var btn = $('reg-btn');
+    var password = $('r-pass').value;
+    if (password !== $('r-pass2').value) return regSay('Mật khẩu nhập lại không khớp.', 'err');
+    regSay('Đang tạo tài khoản...');
+    try {
+      var d = await UI.withButton(btn, function () {
+        return UI.api('/api/register', {
+          username: $('r-user').value.trim(),
+          displayName: $('r-name').value.trim(),
+          password: password,
+          passwordConfirm: $('r-pass2').value
+        });
+      });
+      regSay('Đã tạo tài khoản “' + (d.user ? d.user.username : $('r-user').value.trim()) + '”. Đang đăng nhập...', 'ok');
+      location.replace('/my');
+    } catch (err) {
+      regSay(err.message, 'err');
+      UI.fail(err.message);
+    }
+  });
+
+  UI.api('/api/me', undefined, { noRedirect: true })
+    .then(function (d) {
+      if (!d || !d.user) return;
+      var login = document.querySelector('nav.top-nav a[href="/login"]');
+      if (login) {
+        login.textContent = 'Đăng xuất';
+        login.href = '#';
+        login.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          fetch('/api/logout', { method: 'POST' }).then(function () { location.reload(); });
+        });
+      }
+    })
+    .catch(function () {});
+</script>
+</body>
+</html>

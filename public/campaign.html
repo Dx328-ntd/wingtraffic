@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WingTraffic Chiến dịch</title>
+<meta name="robots" content="noindex" />
+<link rel="stylesheet" href="/ui.css" />
+<style>
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 16px; margin-top: 12px; }
+  .status-grid .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
+  .status-grid .v { font-weight: 600; font-size: 13px; word-break: break-word; }
+  .tabs-card { padding-bottom: 8px; }
+  .sep { border: 0; border-top: 1px solid var(--border-2); margin: 18px 0; }
+  .hours + .hint { margin-top: 8px; }
+  #tasks { min-height: 190px; }
+  #tasksHint code { white-space: nowrap; }
+  @media (max-width: 700px) { #tasks { min-height: 150px; } }
+</style>
+
+</head>
+<body>
+<main class="main">
+  <div class="card">
+    <div class="toolbar">
+      <span id="state" class="badge off">Đang tải...</span>
+      <button class="btn primary" id="btnStart" onclick="start()" type="button">▶ Bắt đầu</button>
+      <button class="btn danger" id="btnStop" onclick="stop()" type="button">■ Dừng</button>
+      <button class="btn" id="btnSound" onclick="toggleSound()" type="button">🔇 Âm báo: tắt</button>
+      <span class="toolbar" style="margin-left:auto">
+        <button class="btn primary" id="btnSave" onclick="saveAll()" type="button" title="Lưu toàn bộ cấu hình (Ctrl+S)">💾 Lưu cấu hình</button>
+        <span id="msg" class="msg" role="status"></span>
+      </span>
+    </div>
+    <div class="status-grid">
+      <div><div class="k">Luồng đang chạy</div><div class="v" id="stThreads">—</div></div>
+      <div><div class="k">RAM trống</div><div class="v" id="stMem">—</div></div>
+      <div><div class="k">CPU · mạng</div><div class="v" id="stLoad">—</div></div>
+      <div><div class="k">OmniLogin</div><div class="v" id="stOmni">—</div></div>
+      <div><div class="k">Thiết bị hôm nay</div><div class="v" id="stDevice">—</div></div>
+      <div><div class="k">Khung giờ chạy</div><div class="v" id="stHours">—</div></div>
+    </div>
+    <div id="captchaAlert" hidden></div>
+    <div id="paceAlert" class="alert warn" hidden></div>
+    <details class="note" style="margin-top:12px">
+      <summary>Chi tiết hệ thống (RAM, CPU, mạng, thiết bị, khung giờ)</summary>
+      <div class="note-body"><span id="meta">—</span></div>
+    </details>
+  </div>
+
+  <div class="card tabs-card">
+    <div class="tabs" role="tablist" aria-label="Cài đặt chiến dịch">
+      <button data-tab="run" role="tab" aria-selected="true" type="button">⚙ Cài đặt chạy</button>
+      <button data-tab="keyword" role="tab" aria-selected="false" type="button">📝 Từ khóa &amp; lịch</button>
+      <button data-tab="proxy" role="tab" aria-selected="false" type="button">🌐 Proxy</button>
+      <button data-tab="integ" role="tab" aria-selected="false" type="button">🔔 Tích hợp</button>
+    </div>
+
+    <section class="tab-panel" data-panel="keyword" hidden>
+      <div class="card-head">
+        <h2>Danh sách từ khóa</h2>
+        <span class="card-sub">Sửa xong bấm <b>Lưu cấu hình</b> (hoặc Ctrl+S)</span>
+      </div>
+      <textarea id="tasks" placeholder="kèo trực tuyến | https://keotructuyen.tv | 100/ngày&#10;kèo nhà cái trực tiếp | https://tructiepkeonhacai.tv | 5/giờ"></textarea>
+      <div class="hint" id="tasksHint">Mỗi dòng: <b>từ khóa | URL cần vào | số lượt/ngày</b> hoặc <b>số lượt/giờ</b> (vd <code>100/ngày</code>, <code>5/giờ</code>; chỉ ghi số = theo ngày; bỏ trống = 10/ngày). Dòng bắt đầu bằng # = tạm tắt.<br>
+      Theo ngày: rải đều trong khung giờ chạy (đặt khung <b>0–24</b> để rải đều cả 24 tiếng). Theo giờ: mỗi giờ trong khung chạy đều chạy đủ số lượt, rải đều trong 60 phút. Bị trễ (server tắt, thiếu RAM) thì chạy bù dần theo lịch.</div>
+      <div class="row-actions">
+        <button class="btn primary" onclick="saveAll()" type="button">💾 Lưu cấu hình</button>
+      </div>
+      <div class="tbl-wrap" style="margin-top:12px">
+        <table class="tasks">
+          <thead><tr><th>Từ khóa</th><th>URL</th><th class="num">Kế hoạch</th><th class="num">Theo lịch</th><th class="num">Hôm nay</th><th class="num">Thành công</th><th class="num">Không thấy</th><th class="num">Captcha</th><th class="num">Lỗi</th></tr></thead>
+          <tbody id="taskRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="run">
+      <div class="card-head">
+        <h2>Cài đặt chạy</h2>
+        <span class="card-sub">Nhịp chạy, thời gian ở lại, RAM và profile — sửa xong bấm <b>Lưu cấu hình</b></span>
+      </div>
+      <div class="fields">
+        <div><label for="threads">Số luồng tối đa</label><input type="number" id="threads" min="1" max="30" /></div>
+        <div><label for="device">Thiết bị chạy traffic</label><select id="device" onchange="toggleDevice()"><option value="mixed">Hỗn hợp 70% máy tính / 30% di động (quy định)</option><option value="desktop">Máy tính (Windows)</option><option value="mobile">Di động (Android/iPhone)</option></select></div>
+        <div id="mobilePctWrap"><label for="mobilePercent">Tỉ lệ di động (%)</label><input type="number" id="mobilePercent" min="0" max="100" value="30" oninput="toggleDevice()" /><div class="hint" id="deviceHint"></div></div>
+        <div><label for="maxPages">Số trang Google tìm</label><input type="number" id="maxPages" min="1" max="10" /></div>
+        <div><label for="impressionEvery">Lượt "chỉ hiển thị" (1 / N lượt)</label><input type="number" id="impressionEvery" min="0" max="100" value="20" oninput="impressionHint()" /><div class="hint" id="impressionHint"></div></div>
+        <div><label>Ở lại trang đích (giây)</label><div class="range"><input type="number" id="dwellMin" min="0" max="3600" oninput="dwellEstimate()" /><span>–</span><input type="number" id="dwellMax" min="0" max="3600" oninput="dwellEstimate()" /></div></div>
+        <div><label for="subpages">Số trang con</label><select id="subpages" onchange="dwellEstimate()"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+        <div><label>Ở lại mỗi trang con (giây)</label><div class="range"><input type="number" id="subDwellMin" min="0" max="3600" oninput="dwellEstimate()" /><span>–</span><input type="number" id="subDwellMax" min="0" max="3600" oninput="dwellEstimate()" /></div><div class="hint" id="dwellHint"></div></div>
+        <div><label>Khung giờ chạy (giờ)</label><div class="range"><input type="number" id="activeFrom" min="0" max="23" /><span>–</span><input type="number" id="activeTo" min="1" max="24" /></div></div>
+        <div><label for="minFreeMemMB">RAM trống tối thiểu (MB)</label><input type="number" id="minFreeMemMB" min="200" /></div>
+        <div><label for="memPerThreadMB">Chừa RAM mỗi luồng mới (MB)</label><input type="number" id="memPerThreadMB" min="0" max="4096" /></div>
+        <div><label for="profileMode">Chế độ profile</label><select id="profileMode"><option value="pool">Dùng lại nhóm cố định</option><option value="fresh">Tạo mới mỗi lượt</option></select></div>
+        <div><label for="recycleAfter">Tạo lại profile sau (lượt)</label><input type="number" id="recycleAfter" min="0" max="1000" /></div>
+        <div><label for="captchaMode">Khi gặp captcha</label><select id="captchaMode"><option value="manual">Chờ tôi giải tay</option><option value="capsolver">Tự động CapSolver (fallback: chờ tay)</option><option value="rotate">Đổi IP ngay</option></select></div>
+        <div><label for="solverApiKey">CapSolver API key</label><input type="password" id="solverApiKey" placeholder="(để trống = không dùng)" /></div>
+        <div><label for="captchaWaitMin">Chờ giải tay (phút)</label><input type="number" id="captchaWaitMin" min="1" max="15" /></div>
+        <div><label class="check"><input type="checkbox" id="headless" /> Chạy ẩn (headless)</label></div>
+      </div>
+      <div class="hint">Lượt của mỗi từ khóa được rải đều trong khung giờ chạy. Khi RAM trống thấp hơn ngưỡng thì chưa mở thêm luồng. <b>Chạy nhiều luồng</b>: mỗi luồng ≈ 1 cửa sổ Chrome (<b>~1,1 GB RAM đỉnh</b> và ~0,7 lõi CPU theo số đo thật trong bảng lượt chạy — xem mục 10.9 của Hướng dẫn sử dụng). Engine mở lần lượt (cách nhau 3–8 giây) và chừa sẵn <b>Chừa RAM mỗi luồng mới</b> cho luồng vừa mở; RAM trống không đủ thì không mở thêm luồng và ghi cảnh báo ở khung Nhật ký. <b>Số luồng tối đa ở đây là trần chung của cả engine</b>; mỗi chiến dịch còn tự giới hạn số luồng chạy cùng lúc bằng ô <b>“Luồng chạy song song tối đa”</b> khi tạo/sửa chiến dịch (1 = tuần tự, mặc định) — xem mục 10.17 của Hướng dẫn sử dụng. Chờ giải tay: cửa sổ bị captcha được đưa lên trước + thông báo Windows; hết giờ chưa giải thì đổi IP thử lại. Chạy ẩn thì không giải tay được.<br><b>Lượt "chỉ hiển thị"</b>: quy định chung <b>cứ 20 lượt có tìm Google thì 1 lượt</b> chỉ gõ từ khóa rồi thoát tab — không bấm vào kết quả, nên site chỉ nhận <b>lượt hiển thị</b> trên Google mà không nhận lượt truy cập (giống người thật liếc kết quả rồi thoát). Chia theo <b>số lượt</b>, chỉ tính các lượt có bấm vào kết quả; đặt <b>0</b> để tắt. Xem mục 10.14 của Hướng dẫn sử dụng.<br>Dùng lại nhóm cố định: mỗi luồng một profile (omni-pool-1, 2...), mỗi lượt đổi IP + độ phân giải và xóa cookie; sau N lượt tạo lại profile để đổi dấu vân tay (0 = không tạo lại). Tiết kiệm lượt tạo profile của OmniLogin.<br><b>Thiết bị</b>: quy định chung <b>70% máy tính / 30% di động</b> — engine <b>chia theo số lượt</b> (100 lượt/giờ = 70 lượt máy tính + 30 lượt di động; chạy theo ngày cũng chia y vậy cho cả ngày), không phụ thuộc may rủi. <b>Di động</b> dùng profile Android/iPhone (OmniLogin tự sinh UA di động + touch; các lượt di động luôn mở cửa sổ thật vì emulation di động không đúng ở chế độ ẩn), <b>Hỗn hợp</b> chạy theo <b>Tỉ lệ di động</b> đã đặt. Xem mục 10.10 của Hướng dẫn sử dụng.</div>
+    </section>
+
+    <section class="tab-panel" data-panel="proxy" hidden>
+      <div class="card-head">
+        <h2>Proxy</h2>
+        <span class="card-sub">Mỗi lượt một IP mới — proxy xoay Webshare Residential hoặc profile OmniLogin có sẵn</span>
+      </div>
+      <div class="fields" style="margin-top:10px">
+        <div><label for="pxMode">Nguồn proxy</label><select id="pxMode" onchange="toggleProxyMode()"><option value="webshare">Webshare xoay (username)</option><option value="omni">Profile OmniLogin (xoay IP theo app)</option></select></div>
+      </div>
+      <div class="fields" id="pxWebWrap" style="margin-top:10px">
+        <div><label for="pxType">Loại</label><select id="pxType"><option>HTTP</option><option>HTTPS</option><option>Socks5</option></select></div>
+        <div><label for="pxHost">Host</label><input type="text" id="pxHost" placeholder="p.webshare.io" /></div>
+        <div><label for="pxPort">Port</label><input type="number" id="pxPort" /></div>
+        <div><label for="pxUser">Username gốc</label><input type="text" id="pxUser" placeholder="gnrxhhat" /></div>
+        <div><label for="pxPass">Mật khẩu</label><input type="password" id="pxPass" placeholder="(giữ nguyên)" /></div>
+        <div><label for="pxCountry">Quốc gia</label><input type="text" id="pxCountry" placeholder="VN" oninput="toggleProxyMode()" /></div>
+      </div>
+      <div class="fields" id="pxOmniWrap" style="margin-top:10px">
+        <div style="flex-basis:100%"><label for="pxProfiles">Tên profile (mỗi dòng 1 tên, theo thứ tự luồng)</label><textarea id="pxProfiles" rows="4" placeholder="Sui&#10;Sui1&#10;Sui2" oninput="toggleProxyMode()"></textarea></div>
+        <div><label for="pxRotate">Đổi IP sau (giây)</label><input type="number" id="pxRotate" min="10" value="305" oninput="toggleProxyMode()" /></div>
+      </div>
+      <div class="hint" id="pxHint"></div>
+    </section>
+
+    <section class="tab-panel" data-panel="integ" hidden>
+      <div class="card-head">
+        <h2>OmniLogin</h2>
+        <span class="card-sub">Kiểm tra và tự mở app khi chưa chạy</span>
+      </div>
+      <div class="fields">
+        <div><label class="check"><input type="checkbox" id="autoLaunchOmni" /> Tự mở OmniLogin khi chưa chạy</label></div>
+        <div style="grid-column:1/-1"><label for="omniloginPath">Đường dẫn Omnilogin.exe</label><input type="text" id="omniloginPath" placeholder="(trống = tự dò)" /></div>
+      </div>
+      <div class="row-actions">
+        <button class="btn" onclick="checkOmni()" type="button">Kiểm tra / mở OmniLogin</button>
+        <span class="meta" id="omniState"></span>
+      </div>
+      <div class="hint">Server khởi động và mỗi lần mở luồng đều kiểm tra OmniLogin (cổng 35353); nếu tắt thì tự mở và chờ tối đa 2 phút. Bridge API vẫn phải bật sẵn trong Preferences của OmniLogin.</div>
+
+      <hr class="sep" />
+
+      <div class="card-head">
+        <h2>Telegram</h2>
+        <span class="card-sub">Báo cáo ngày và cảnh báo sự cố qua bot</span>
+      </div>
+      <div class="fields">
+        <div><label for="tgToken">Bot token</label><input type="password" id="tgToken" placeholder="123456:ABC..." /></div>
+        <div><label for="tgChat">Chat ID</label><input type="text" id="tgChat" placeholder="vd 123456789 hoặc -100..." /></div>
+        <div><label for="tgHour">Gửi báo cáo ngày lúc (giờ)</label><input type="number" id="tgHour" min="0" max="23" /></div>
+        <div><label class="check"><input type="checkbox" id="tgEvents" /> Báo sự cố</label></div>
+        <div><label class="check"><input type="checkbox" id="tgCaptcha" /> Báo khi cần giải captcha</label></div>
+      </div>
+      <div class="row-actions">
+        <button class="btn" onclick="tgTest()" type="button">Gửi thử</button>
+        <button class="btn" onclick="tgReport()" type="button">Gửi báo cáo ngay</button>
+      </div>
+      <div class="hint">Tạo bot bằng @BotFather để lấy token; nhắn cho bot một tin rồi lấy Chat ID (vd qua @userinfobot). Sự cố gồm: OmniLogin không phản hồi, hết lượt tạo profile, gói hết chỗ, Bridge API tắt, bắt đầu/dừng chiến dịch. Bấm "Lưu cấu hình" trước khi gửi thử.</div>
+    </section>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Luồng đang chạy</h2>
+      <span class="card-sub">Tự cập nhật mỗi 2 giây</span>
+      <div class="card-actions">
+        <input type="search" id="workerSearch" placeholder="Lọc từ khóa / IP…" aria-label="Lọc luồng đang chạy" />
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Từ khóa</th><th>Thiết bị</th><th>Bước</th><th>IP / proxy</th><th class="num">RAM</th><th class="num">CPU</th><th class="num">Thời gian</th><th>Nhật ký</th></tr></thead>
+        <tbody id="workerRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Lượt gần đây</h2>
+      <span class="card-sub">Bấm tiêu đề cột để sắp xếp</span>
+      <div class="card-actions">
+        <input type="search" id="runSearch" placeholder="Lọc theo từ khóa…" aria-label="Lọc lượt gần đây" />
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="runTable">
+        <thead><tr><th>Lúc</th><th>Từ khóa</th><th>Kết quả</th><th>Vị trí</th><th>Thiết bị</th><th class="num">Trên site</th><th class="num">Trang</th><th>IP / proxy</th><th class="num">RAM cao nhất</th><th class="num">CPU TB</th><th class="num">Tổng</th></tr></thead>
+        <tbody id="runRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Thống kê proxy &amp; khung giờ hôm nay</h2>
+      <span class="card-sub">Số lần thử · tỉ lệ captcha · tỉ lệ thành công</span>
+    </div>
+    <div class="tbl-wrap">
+      <table id="proxyTable">
+        <thead><tr><th>Proxy</th><th class="num">Lần thử</th><th class="num">Captcha</th><th class="num">Lỗi proxy</th><th class="num">Thành công</th><th class="num">Trạng thái</th><th class="num">Dùng lần cuối</th></tr></thead>
+        <tbody id="proxyRows"></tbody>
+      </table>
+    </div>
+    <div class="hint" style="margin:14px 0 6px">Theo từng giờ trong ngày (cột càng cao = càng nhiều lượt thử):</div>
+    <div id="hourBars" class="hours"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Nhật ký chung</h2>
+      <div class="card-actions">
+        <button class="btn sm" type="button" data-copy="#events" data-copy-label="nhật ký">Copy</button>
+      </div>
+    </div>
+    <pre id="events" class="tall">...</pre>
+  </div>
+
+  <div class="sticky-bar" id="saveBar">
+    <div class="in">
+      <span class="grow" id="saveBarText">Có thay đổi chưa lưu.</span>
+      <button class="btn primary" onclick="saveAll()" type="button">💾 Lưu cấu hình</button>
+    </div>
+  </div>
+</main>
+<script src="/ui.js"></script>
+<script>
+  var UI = window.WingTrafficUI;
+  var $ = UI.$;
+  var guard = null;
+  var openLogs = {};
+  var alerted = [];
+  var audio = null;
+
+  function fmtLeft(s) { return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function toggleSound() {
+    if (audio) { audio.close(); audio = null; }
+    else { try { audio = new (window.AudioContext || window.webkitAudioContext)(); beep(); } catch (e) { audio = null; } }
+    $('btnSound').textContent = audio ? '🔔 Âm báo: bật' : '🔇 Âm báo: tắt';
+  }
+  function beep() {
+    if (!audio) return;
+    [0, 0.35, 0.7].forEach(function (t) {
+      var o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(audio.destination);
+      g.gain.setValueAtTime(0.25, audio.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + t + 0.25);
+      o.start(audio.currentTime + t); o.stop(audio.currentTime + t + 0.26);
+    });
+  }
+  var STATUS = { ok: 'Thành công', notfound: 'Không thấy URL', captcha: 'Captcha', error: 'Lỗi' };
+var dbMode = false;
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function setMsg(t, cls) { $('msg').textContent = t || ''; $('msg').className = 'msg' + (cls ? ' ' + cls : ''); }
+
+  async function api(p, body) { return UI.api(p, body); }
+
+  function renderStatus(st, sys) {
+    sys = sys || st.system || {};
+    $('stThreads').textContent = st.workers.length + ' / ' + st.maxThreads + (st.limitCap !== null ? ' (giới hạn gói OmniLogin)' : '');
+    $('stMem').textContent = UI.num(st.freeMemMB) + ' / ' + UI.num(st.totalMemMB) + ' MB';
+    var load = [];
+    if (sys.cpuPct != null) load.push('CPU ' + sys.cpuPct + '%');
+    if (sys.netKBps != null) load.push(sys.netKBps >= 1024 ? 'mạng ' + (sys.netKBps / 1024).toFixed(1) + ' MB/s' : 'mạng ' + sys.netKBps + ' KB/s');
+    $('stLoad').textContent = load.join(' · ') || '—';
+    $('stOmni').textContent = st.omni.launching ? 'đang mở…' : st.omni.up === false ? '✖ không phản hồi' : st.omni.up ? '✔ đang chạy' : 'chưa kiểm tra';
+    $('stDevice').textContent = st.deviceStats
+      ? st.deviceStats.desktop + ' máy tính · ' + st.deviceStats.mobile + ' di động (' + st.deviceStats.desktopPercent + '/' + st.deviceStats.mobilePercent + '%)'
+      : '—';
+    $('stHours').textContent = st.settings.activeFrom + 'h – ' + st.settings.activeTo + 'h';
+  }
+
+  function fillForm(st) {
+    var s = st.settings;
+    ['threads', 'maxPages', 'impressionEvery', 'dwellMin', 'dwellMax', 'subpages', 'subDwellMin', 'subDwellMax', 'activeFrom', 'activeTo', 'minFreeMemMB', 'memPerThreadMB', 'captchaWaitMin', 'profileMode', 'recycleAfter', 'device', 'mobilePercent'].forEach(function (k) { $(k).value = s[k]; });
+    $('headless').checked = !!s.headless;
+    toggleDevice();
+    impressionHint();
+    $('pxMode').value = s.proxy.mode || 'webshare';
+    $('pxHost').value = s.proxy.host; $('pxPort').value = s.proxy.port; $('pxType').value = s.proxy.type;
+    $('pxUser').value = s.proxy.userBase; $('pxCountry').value = s.proxy.country;
+    $('pxProfiles').value = (s.proxy.profiles || []).join('\n');
+    $('pxRotate').value = s.proxy.rotateSec || 305;
+    $('pxPass').value = ''; $('pxPass').placeholder = s.proxy.password ? '(đã lưu — để trống = giữ nguyên)' : '(chưa có)';
+    $('solverApiKey').value = ''; $('solverApiKey').placeholder = s.solverApiKey ? '(đã lưu — để trống = giữ nguyên)' : '(chưa có)';
+    $('captchaMode').value = s.captchaMode;
+    toggleProxyMode();
+    $('autoLaunchOmni').checked = !!s.autoLaunchOmni; $('omniloginPath').value = s.omniloginPath || '';
+    $('tgToken').value = ''; $('tgToken').placeholder = s.telegram.token ? '(đã lưu — để trống = giữ nguyên)' : '123456:ABC...';
+    $('tgChat').value = s.telegram.chatId; $('tgHour').value = s.telegram.dailyHour;
+    $('tgEvents').checked = !!s.telegram.events; $('tgCaptcha').checked = !!s.telegram.captchaAlerts;
+    dwellEstimate();
+    $('tasks').value = st.tasks.map(function (t) { return (t.enabled ? '' : '# ') + t.keyword + ' | ' + t.targetUrl + ' | ' + t.count + '/' + (t.unit === 'hour' ? 'giờ' : 'ngày'); }).join('\n');
+    dbMode = !!st.dbMode;
+    $('tasks').disabled = dbMode;
+    $('tasksHint').innerHTML = dbMode
+      ? '<b>Đang chạy chế độ CSDL</b> — từ khóa được quản lý theo từng chiến dịch và phải được admin duyệt. Tạo/sửa và xem tiến độ ở <a href="/my">trang Chiến dịch của tôi</a>. Ô trên chỉ hiển thị các chiến dịch engine đang dùng.'
+      : 'Mỗi dòng: <b>từ khóa | URL cần vào | số lượt/ngày</b> hoặc <b>số lượt/giờ</b> (vd <code>100/ngày</code>, <code>5/giờ</code>; chỉ ghi số = theo ngày; bỏ trống = 10/ngày). Dòng bắt đầu bằng # = tạm tắt.<br> Theo ngày: rải đều trong khung giờ chạy (đặt khung <b>0–24</b> để rải đều cả 24 tiếng). Theo giờ: mỗi giờ trong khung chạy đều chạy đủ số lượt, rải đều trong 60 phút. Bị trễ (server tắt, thiếu RAM) thì chạy bù dần theo lịch.';
+  }
+
+  function readForm() {
+    var num = function (id) { return Number($(id).value); };
+    var tasks = $('tasks').value.split('\n').map(function (line) {
+      var raw = line.trim();
+      if (!raw) return null;
+      var enabled = raw[0] !== '#';
+      var parts = raw.replace(/^#\s*/, '').split('|').map(function (x) { return x.trim(); });
+      if (!parts[0] || !parts[1]) return null;
+      var m = (parts[2] || '').match(/^(\d+)\s*(?:\/\s*(\S+))?$/);
+      var unit = m && m[2] && /^(giờ|gio|hour|h)$/i.test(m[2]) ? 'hour' : 'day';
+      return { keyword: parts[0], targetUrl: parts[1], count: m ? Number(m[1]) : 10, unit: unit, enabled: enabled };
+    }).filter(Boolean);
+    var body = {
+      settings: {
+        threads: num('threads'), maxPages: num('maxPages'), impressionEvery: num('impressionEvery'), dwellMin: num('dwellMin'), dwellMax: num('dwellMax'),
+        subpages: num('subpages'), subDwellMin: num('subDwellMin'), subDwellMax: num('subDwellMax'),
+        activeFrom: num('activeFrom'), activeTo: num('activeTo'), minFreeMemMB: num('minFreeMemMB'), memPerThreadMB: num('memPerThreadMB'), headless: $('headless').checked,
+        device: $('device').value, mobilePercent: num('mobilePercent'),
+        captchaMode: $('captchaMode').value, captchaWaitMin: num('captchaWaitMin'), solverApiKey: $('solverApiKey').value,
+        profileMode: $('profileMode').value, recycleAfter: num('recycleAfter'),
+        proxy: {
+          mode: $('pxMode').value,
+          host: $('pxHost').value, port: num('pxPort'), type: $('pxType').value, userBase: $('pxUser').value, password: $('pxPass').value, country: $('pxCountry').value,
+          profiles: $('pxProfiles').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean),
+          rotateSec: num('pxRotate'),
+        },
+        autoLaunchOmni: $('autoLaunchOmni').checked, omniloginPath: $('omniloginPath').value,
+        telegram: { token: $('tgToken').value, chatId: $('tgChat').value, dailyHour: num('tgHour'), events: $('tgEvents').checked, captchaAlerts: $('tgCaptcha').checked },
+      },
+    };
+    if (!dbMode) body.tasks = tasks;
+    return body;
+  }
+
+  async function saveAll() {
+    setMsg('Đang lưu...');
+    try {
+      var st = await api('/api/campaign', readForm());
+      fillForm(st); render(st);
+      setMsg('Đã lưu cấu hình.', 'ok');
+      if (guard) guard.markSaved();
+      UI.ok('Đã lưu cấu hình chiến dịch.');
+    } catch (e) { setMsg(e.message, 'err'); UI.fail(e.message); }
+  }
+  async function start() {
+    try {
+      await api('/api/campaign', readForm());
+      render(await api('/api/campaign/start', {}));
+      setMsg('Đã bắt đầu.', 'ok');
+      if (guard) guard.markSaved();
+      UI.ok('Chiến dịch đã bắt đầu chạy.');
+    } catch (e) { setMsg(e.message, 'err'); UI.fail(e.message); }
+  }
+  function toggleDevice() {
+    var mixed = $('device').value === 'mixed';
+    $('mobilePctWrap').style.display = mixed ? '' : 'none';
+    if (!mixed) return;
+    var raw = $('mobilePercent').value;
+    var pct = raw === '' ? 30 : Math.round(Number(raw));
+    if (!isFinite(pct)) pct = 30;
+    pct = Math.min(100, Math.max(0, pct));
+    var desk = 100 - pct;
+    $('deviceHint').innerHTML = 'Quy định: <b>' + desk + '% máy tính / ' + pct + '% di động</b>, chia theo số lượt — ' +
+      'vd <code>100 lượt/giờ</code> = ' + desk + ' lượt máy tính + ' + pct + ' lượt di động, chạy theo ngày cũng chia y vậy cho cả ngày.';
+  }
+
+  function impressionHint() {
+    var raw = $('impressionEvery').value;
+    var n = raw === '' ? 20 : Math.round(Number(raw));
+    if (!isFinite(n)) n = 20;
+    n = Math.min(100, Math.max(0, n));
+    $('impressionHint').innerHTML = n
+      ? 'Quy định: cứ <b>' + n + ' lượt tìm kiếm có 1 lượt chỉ hiển thị</b> — lượt đó chỉ gõ từ khóa rồi thoát tab, không bấm vào kết quả (site nhận lượt hiển thị trên Google, không nhận lượt truy cập).'
+      : 'Đang <b>tắt</b> lượt chỉ hiển thị — mọi lượt tìm kiếm đều bấm vào kết quả.';
+  }
+
+  function dwellEstimate() {
+    var dwell = Number($('dwellMax').value) || 0;
+    var subs = Number($('subpages').value) || 0;
+    var subMax = Number($('subDwellMax').value) || 0;
+    var sec = dwell + subs * subMax + 30;
+    $('dwellHint').innerHTML = 'Một lượt ≈ <b>' + (Math.round(sec / 6) / 10) + ' phút</b> (' + dwell + 's + ' + subs + ' trang con × ' + subMax + 's). ' +
+      'Chiến dịch có chọn loại thì dùng thời gian của loại đó.';
+  }
+
+  function toggleProxyMode() {
+    var omni = $('pxMode').value === 'omni';
+    $('pxWebWrap').style.display = omni ? 'none' : '';
+    $('pxOmniWrap').style.display = omni ? '' : 'none';
+    if (omni) {
+      var names = $('pxProfiles').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+      $('pxHint').innerHTML = 'Mỗi luồng dùng <b>một profile OmniLogin có sẵn</b> theo thứ tự: luồng 1 → ' +
+        '<code>' + (names[0] || 'profile[0]') + '</code>, luồng 2 → <code>' + (names[1] || 'profile[1]') + '</code>, ... ' +
+        'Proxy tự đổi IP trong app (mỗi <b>' + ($('pxRotate').value || 305) + ' giây</b>); engine mở 1 luồng mới sau mỗi chu kỳ đó để luôn chạy trên IP vừa xoay.';
+      return;
+    }
+    var cc = $('pxCountry').value.trim();
+    var countryWarn = cc ? '' : '<br><b>⚠ Chưa điền Quốc gia</b> — nhà cung cấp sẽ trả IP ngẫu nhiên nhiều nước (không khớp dấu vân tay <code>vi-VN</code> của app). Nên điền <code>VN</code>.';
+    $('pxHint').innerHTML = 'Mỗi lượt dùng username <code>gốc-QUỐCGIA-sốngẫunhiên</code> → một IP mới cố định suốt lượt (Webshare Residential). Ô mật khẩu để trống = giữ mật khẩu đã lưu.' + countryWarn;
+  }
+  async function tgTest() {
+    try { await api('/api/campaign/telegram-test', {}); setMsg('Đã gửi tin thử qua Telegram.', 'ok'); } catch (e) { setMsg(e.message, 'err'); }
+  }
+  async function tgReport() {
+    try { await api('/api/campaign/telegram-report', {}); setMsg('Đã gửi báo cáo qua Telegram.', 'ok'); } catch (e) { setMsg(e.message, 'err'); }
+  }
+  async function checkOmni() {
+    $('omniState').textContent = 'Đang kiểm tra (có thể mất tới 2 phút nếu phải mở OmniLogin)...';
+    try { var r = await api('/api/campaign/omnilogin', {}); $('omniState').textContent = (r.up ? '✔ ' : '✖ ') + r.message; }
+    catch (e) { $('omniState').textContent = '✖ ' + e.message; }
+  }
+  function pct(n, d) { return d ? Math.round(n / d * 100) + '%' : '—'; }
+  function fmtAgo(iso) {
+    if (!iso) return '—';
+    var m = Math.round((Date.now() - new Date(iso)) / 60000);
+    return m < 1 ? 'vừa xong' : m < 60 ? m + ' phút trước' : m < 1440 ? Math.round(m / 60) + ' giờ trước' : Math.round(m / 1440) + ' ngày trước';
+  }
+
+  async function stop() {
+    try { render(await api('/api/campaign/stop', {})); setMsg('Đã dừng — các luồng đang chạy sẽ chạy nốt lượt hiện tại.', 'ok'); }
+    catch (e) { setMsg(e.message, 'err'); UI.fail(e.message); }
+  }
+
+  function render(st) {
+    var state = $('state');
+    if (st.running && st.quotaBlocked) { state.textContent = 'Hết lượt tạo profile hôm nay (OmniLogin)'; state.className = 'badge warn'; }
+    else if (st.running && !st.inActiveHours) { state.textContent = 'Ngoài khung giờ chạy'; state.className = 'badge warn'; }
+    else if (st.running) { state.textContent = 'Đang chạy'; state.className = 'badge on'; }
+    else { state.textContent = st.workers.length ? 'Đang dừng (chạy nốt ' + st.workers.length + ' luồng)' : 'Đã dừng'; state.className = 'badge off'; }
+    $('btnStart').disabled = st.running; $('btnStop').disabled = !st.running;
+    var sys = st.system || {};
+    $('meta').textContent = st.workers.length + '/' + st.maxThreads + ' luồng' + (st.limitCap !== null ? ' (gói OmniLogin giới hạn)' : '') +
+      ' · RAM trống ' + st.freeMemMB + '/' + st.totalMemMB + ' MB' +
+      (sys.cpuPct != null ? ' · CPU ' + sys.cpuPct + '%' : '') +
+      (sys.netKBps != null ? ' · mạng ' + (sys.netKBps >= 1024 ? (sys.netKBps / 1024).toFixed(1) + ' MB/s' : sys.netKBps + ' KB/s') : '') +
+      ' · OmniLogin ' + (st.omni.launching ? 'đang mở...' : st.omni.up === false ? '✖ không phản hồi' : st.omni.up ? '✔' : '?') +
+      (st.deviceStats ? ' · thiết bị ' + st.deviceStats.desktopPercent + '% máy tính / ' + st.deviceStats.mobilePercent + '% di động' +
+        ' (hôm nay: ' + st.deviceStats.desktop + ' máy tính, ' + st.deviceStats.mobile + ' di động)' : '') +
+      (st.impressionStats ? ' · ' + (st.impressionStats.every
+        ? 'cứ ' + st.impressionStats.every + ' lượt tìm kiếm có 1 lượt chỉ hiển thị (hôm nay: ' + st.impressionStats.today + ')'
+        : 'không dùng lượt chỉ hiển thị') : '') +
+      ' · giờ chạy ' + st.settings.activeFrom + 'h–' + st.settings.activeTo + 'h';
+    renderStatus(st, sys);
+
+    var ps = st.proxyStats || { proxies: [], hours: {} };
+    $('proxyRows').innerHTML = ps.proxies.map(function (p) {
+      var state = !p.inUse ? '<span class="u">không còn dùng</span>' : p.benchedLeft ? '<span class="s-captcha">tạm loại · còn ' + p.benchedLeft + ' phút</span>' : '<span class="s-ok">đang dùng</span>';
+      return '<tr' + (p.inUse ? '' : ' style="opacity:.55"') + '><td>' + esc(p.label) + '</td><td class="num">' + p.attempts + '</td><td class="num s-captcha">' + pct(p.captcha, p.attempts) +
+        '</td><td class="num s-error">' + pct(p.proxyFail, p.attempts) + '</td><td class="num s-ok">' + pct(p.ok, p.attempts) + '</td><td class="num">' + state + '</td><td class="num">' + fmtAgo(p.lastUsed) + '</td></tr>';
+    }).join('') || '<tr><td colspan="7" class="empty">Chưa có dữ liệu — thống kê bắt đầu từ lượt chạy kế tiếp.</td></tr>';
+    var maxA = 1;
+    for (var hh in ps.hours) maxA = Math.max(maxA, ps.hours[hh].attempts);
+    var bars = '';
+    for (var h = 0; h < 24; h++) {
+      var v = ps.hours[h] || { attempts: 0, captcha: 0, ok: 0 };
+      var hPct = Math.round(v.attempts / maxA * 100), cPart = v.attempts ? v.captcha / v.attempts : 0, oPart = v.attempts ? v.ok / v.attempts : 0;
+      bars += '<div title="' + h + 'h: ' + v.attempts + ' lần thử · captcha ' + pct(v.captcha, v.attempts) + ' · thành công ' + pct(v.ok, v.attempts) + '">' +
+        '<div class="bar"><div style="height:' + hPct + '%;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(127,127,127,.25)">' +
+        '<i class="c" style="height:' + Math.round(cPart * 100) + '%"></i><i class="o" style="height:' + Math.round(oPart * 100) + '%"></i></div></div>' +
+        '<div class="h">' + h + '</div></div>';
+    }
+    $('hourBars').innerHTML = bars;
+
+    $('taskRows').innerHTML = st.tasks.map(function (t) {
+      var d = t.today, done = d.ok + d.notfound + d.captcha, pct = t.perDay ? Math.min(100, Math.round(done / t.perDay * 100)) : 0;
+      var sched = (t.unit === 'hour' ? 'giờ này ' : '') + t.doneNow + '/' + t.due + (t.doneNow < t.due ? ' <span class="s-captcha">(trễ ' + (t.due - t.doneNow) + ')</span>' : '');
+      var pace = t.pace ? '<div class="u">1 lượt ≈ ' + t.pace.sessionMin + ' phút' +
+        ' · song song ≤ ' + t.pace.maxThreads + ' luồng' +
+        (t.pace.overloaded ? ' · <span class="s-captcha">cần ≥' + t.pace.needThreads + ' luồng</span>' : '') +
+        (t.pace.exceedGuard ? ' · <span class="s-error">vượt hạn ' + t.pace.guardMin + ' phút/lượt</span>' : '') + '</div>' : '';
+      return '<tr' + (t.enabled ? '' : ' style="opacity:.5"') + '><td>' + esc(t.keyword) + '</td><td class="u">' + esc(t.targetUrl) + '</td>' +
+        '<td class="num">' + t.count + '/' + (t.unit === 'hour' ? 'giờ' : 'ngày') + '</td><td class="num">' + sched + '</td>' +
+        '<td class="num">' + done + '/' + t.perDay + '<span class="prog"><i style="width:' + pct + '%"></i></span>' + pace + '</td>' +
+        '<td class="num s-ok">' + d.ok + '</td><td class="num s-notfound">' + d.notfound + '</td><td class="num s-captcha">' + d.captcha + '</td><td class="num s-error">' + d.error + '</td></tr>';
+    }).join('') || '<tr><td colspan="9" class="empty">Chưa có từ khóa.</td></tr>';
+
+    var pace = st.tasks.filter(function (t) { return t.pace && (t.pace.overloaded || t.pace.exceedGuard); });
+    $('paceAlert').hidden = !pace.length;
+    $('paceAlert').innerHTML = pace.map(function (t) {
+      var p = t.pace;
+      if (p.overloaded) {
+        return '⚠ <b>' + esc(t.keyword) + '</b>: 1 lượt ≈ ' + p.sessionMin + ' phút, lịch rải cách nhau ≈ ' + p.intervalMin + ' phút ⇒ cần <b>≥' + p.needThreads + ' luồng</b> (engine đặt ' + p.globalThreads + ', chiến dịch cho phép ' + p.maxThreads + '). '
+          + (p.capBlocked
+            ? 'Engine còn luồng — vào <b>Sửa</b> chiến dịch để nâng <b>“Luồng chạy song song tối đa”</b> (mục 10.17 HDSD).'
+            : 'Tăng <b>“Số luồng tối đa”</b> (kèm RAM trống) hoặc giảm số lượt mỗi kỳ.')
+          + ' Nếu không chiến dịch sẽ luôn trễ chỉ tiêu.';
+      }
+      return '⚠ <b>' + esc(t.keyword) + '</b>: 1 lượt ≈ ' + p.sessionMin + ' phút, dài hơn hạn ' + p.guardMin + ' phút/lượt — lượt sẽ bị cắt giữa chừng và tính là lỗi. Giảm thời gian ở lại/trang con của loại chiến dịch.';
+    }).join('<br>');
+
+    var waiting = st.workers.filter(function (w) { return w.captchaLeft !== null; });
+    $('captchaAlert').hidden = !waiting.length;
+    $('captchaAlert').innerHTML = waiting.map(function (w) {
+      return '<div>⚠ Luồng ' + w.slot + ' cần giải captcha — "' + esc(w.keyword) + '" · IP ' + esc(w.ip || '?') + ' · còn ' + fmtLeft(w.captchaLeft) + ' (cửa sổ trình duyệt đã được đưa lên trước)</div>';
+    }).join('');
+    var ids = waiting.map(function (w) { return w.slot + '@' + w.ip; });
+    if (ids.some(function (id) { return alerted.indexOf(id) < 0; })) beep();
+    alerted = ids;
+
+    $('workerRows').innerHTML = st.workers.map(function (w) {
+      var step = w.captchaLeft !== null ? '<span class="cd">Chờ giải captcha · ' + fmtLeft(w.captchaLeft) + '</span>' : esc(w.step);
+      var res = w.res || {};
+      return '<tr' + (w.captchaLeft !== null ? ' class="captcha"' : '') + '><td>' + w.slot + '</td><td>' + esc(w.keyword) + '<div class="u">' + esc(w.targetUrl) + '</div></td><td class="u">' + esc(w.device || '—') + '</td><td>' + step + '</td>' +
+        '<td>' + esc(w.ip || '—') + '<div class="u">' + esc(w.profileName || '') + '</div></td>' +
+        '<td class="num">' + (res.ramMB ? res.ramMB + ' MB' : '—') + '</td><td class="num">' + (res.cpuPct != null ? res.cpuPct + '%' : '—') + '</td>' +
+        '<td class="num">' + w.elapsed + 's</td><td><details data-slot="' + w.slot + '"' + (openLogs[w.slot] ? ' open' : '') + '><summary>Xem</summary><pre>' + esc(w.logs.join('\n')) + '</pre></details></td></tr>';
+    }).join('') || '<tr><td colspan="9" class="empty">Không có luồng nào đang chạy.</td></tr>';
+    Array.prototype.forEach.call(document.querySelectorAll('details[data-slot]'), function (d) {
+      d.addEventListener('toggle', function () { openLogs[d.dataset.slot] = d.open; });
+      var pre = d.querySelector('pre'); pre.scrollTop = pre.scrollHeight;
+    });
+
+    $('runRows').innerHTML = st.recent.map(function (r) {
+      return '<tr><td>' + esc(new Date(r.at).toLocaleTimeString('vi-VN')) + '</td><td>' + esc(r.keyword) + '</td><td class="s-' + r.status + '" title="' + esc(r.error) + '">' + STATUS[r.status] + (r.impression ? ' · 👁 hiển thị' : '') + '</td>' +
+        '<td>' + esc(r.position || '—') + '</td><td class="u">' + esc(r.device || '—') + '</td><td class="num">' + (r.onSite ? r.onSite + 's' : '—') + '</td><td class="num">' + (r.pages || '—') + '</td>' +
+        '<td>' + esc(r.ip || '—') + (r.proxy ? '<div class="u">' + esc(r.proxy) + '</div>' : '') + '</td>' +
+        '<td class="num">' + (r.ramPeakMB ? r.ramPeakMB + ' MB' : '—') + '</td><td class="num">' + (r.cpuAvg != null ? r.cpuAvg + '%' : '—') + '</td><td class="num">' + r.seconds + 's</td></tr>';
+    }).join('') || '<tr><td colspan="11" class="empty">Chưa có lượt nào.</td></tr>';
+
+    $('events').textContent = st.events.join('\n') || 'Chưa có sự kiện.';
+  }
+
+  async function poll() {
+    try { render(await api('/api/campaign')); } catch (e) {}
+    setTimeout(poll, 2000);
+  }
+
+  UI.mount({
+    shell: true,
+    active: '/campaign',
+    title: 'Cấu hình chạy chiến dịch',
+    sub: 'Mỗi lượt: profile (dùng lại hoặc tạo mới) + IP proxy mới → tìm Google → bấm URL → ở lại, xem trang con → đóng trình duyệt. Từ khóa theo từng chiến dịch thì quản lý ở <a href="/my">Chiến dịch của tôi</a>.',
+    actions: '<a class="btn" href="/my">📋 Chiến dịch của tôi</a><a class="btn" href="/test">▶ Chạy thử một lượt</a>'
+  }).then(function () {
+    UI.tabs(document.querySelector('.tabs-card'), 'campaign');
+    guard = UI.guard({ form: '.tabs-card', bar: '#saveBar', label: '#saveBarText' });
+    UI.filterTable('#workerSearch', '#workerRows');
+    UI.filterTable('#runSearch', '#runTable');
+    UI.sortTable('#runTable');
+    UI.sortTable('#proxyTable');
+    UI.bindCopyButtons();
+    UI.shortcuts(function (alsoStart) { saveAll().then(function () { if (alsoStart) start(); }); });
+  });
+
+  api('/api/campaign').then(function (st) { fillForm(st); render(st); setTimeout(poll, 2000); })
+    .catch(function (e) { setMsg(e.message, 'err'); UI.fail(e.message); });
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<div class="wtb" id="wtb" data-seconds="60">
+  <button type="button" class="wtb-btn" id="wtb-btn" aria-describedby="wtb-msg" title="Bấm để bắt đầu đếm ngược 60 giây">
+    <svg class="wtb-ring" viewBox="0 0 48 48" aria-hidden="true">
+      <circle class="wtb-ring-bg" cx="24" cy="24" r="21"></circle>
+      <circle class="wtb-ring-fg" id="wtb-fg" cx="24" cy="24" r="21"></circle>
+    </svg>
+    <img class="wtb-logo" alt="WingTraffic" width="40" height="40" src="data:image/png;base64,__LOGO_B64__">
+  </button>
+  <div class="wtb-text">
+    <b>Wing<span>Traffic</span></b>
+    <span class="wtb-msg" id="wtb-msg" role="status" aria-live="polite">Bấm vào logo để bắt đầu đếm ngược</span>
+  </div>
+  <div class="wtb-count" id="wtb-count" aria-hidden="true">60</div>
+</div>
+<div class="wtb-float" id="wtb-float" hidden>
+  <img alt="" width="28" height="28">
+  <span class="wtb-float-txt" id="wtb-float-txt"></span>
+  <button type="button" class="wtb-float-x" id="wtb-float-x" aria-label="Ẩn thanh này" hidden>×</button>
+</div>
+<style>
+  .wtb { --wtb-blue: #4fa3f0; --wtb-navy: #132144; display: inline-flex; align-items: center; gap: 12px; padding: 8px 14px 8px 8px; border-radius: 16px;
+    background: var(--wtb-navy); color: #fff; font: 14px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; box-shadow: 0 4px 14px rgba(19, 33, 68, .35); max-width: 100%; text-align: left; }
+  .wtb *, .wtb *::before, .wtb *::after { box-sizing: border-box; }
+  .wtb-btn { position: relative; width: 56px; height: 56px; flex: none; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .wtb-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .wtb-btn:disabled { cursor: progress; }
+  .wtb-logo { position: absolute; left: 8px; top: 8px; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: block; transition: transform .2s; }
+  .wtb-btn:not(:disabled):hover .wtb-logo { transform: scale(1.08); }
+  .wtb-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .wtb-ring circle { fill: none; stroke-width: 3; }
+  .wtb-ring-bg { stroke: rgba(255, 255, 255, .18); }
+  .wtb-ring-fg { stroke: var(--wtb-blue); stroke-linecap: round; stroke-dasharray: 131.95; stroke-dashoffset: 131.95; transition: stroke-dashoffset 1s linear; }
+  .wtb-text { display: flex; flex-direction: column; min-width: 0; }
+  .wtb-text b { font-size: 16px; letter-spacing: -.01em; }
+  .wtb-text b span { color: var(--wtb-blue); }
+  .wtb-msg { color: #b9c6e4; font-size: 12.5px; }
+  .wtb-msg .wtb-code { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 6px; background: #fff; color: var(--wtb-navy); font: 700 15px/1.4 Consolas, "Courier New", monospace; letter-spacing: .12em; user-select: all; cursor: copy; }
+  .wtb-count { min-width: 2.2ch; text-align: right; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--wtb-blue); display: none; }
+  .wtb.is-running .wtb-count, .wtb.is-done .wtb-count { display: block; }
+  .wtb.is-done .wtb-count { color: #7be0a6; font-size: 22px; }
+  .wtb.is-done .wtb-ring-fg { stroke: #7be0a6; }
+  .wtb-float { position: fixed; right: 14px; bottom: 14px; z-index: 2147483000; display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border-radius: 999px;
+    background: #132144; color: #fff; font: 600 13px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; box-shadow: 0 6px 18px rgba(0, 0, 0, .3); max-width: calc(100vw - 28px); }
+  .wtb-float[hidden] { display: none; }
+  .wtb-float img { border-radius: 50%; display: block; flex: none; }
+  .wtb-float-txt b { font: 700 15px/1.2 Consolas, "Courier New", monospace; letter-spacing: .12em; color: #7be0a6; cursor: copy; user-select: all; }
+  .wtb-float-x { border: 0; background: none; color: #b9c6e4; font-size: 18px; line-height: 1; padding: 0 2px; cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) { .wtb-ring-fg, .wtb-logo { transition: none; } }
+  @media (max-width: 380px) { .wtb { gap: 9px; padding-right: 10px; } .wtb-msg { font-size: 11.5px; } }
+</style>
+<script>
+(function () {
+  var root = document.getElementById('wtb'); if (!root) return;
+  var btn = document.getElementById('wtb-btn'), fg = document.getElementById('wtb-fg'), msg = document.getElementById('wtb-msg'), cnt = document.getElementById('wtb-count'),
+      fl = document.getElementById('wtb-float'), flTxt = document.getElementById('wtb-float-txt'), flX = document.getElementById('wtb-float-x');
+  var total = Math.max(1, parseInt(root.getAttribute('data-seconds'), 10) || 60), C = 131.95, timer = null, KEY = 'wtb_state_v1', KEEP_MS = 24 * 3600 * 1000;
+
+  function load() { try { var s = JSON.parse(localStorage.getItem(KEY) || 'null'); return s && typeof s.end === 'number' && Date.now() - s.end < KEEP_MS ? s : null; } catch (e) { return null; } }
+  function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+
+  var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', DIGITS = '0123456789', ALL = LETTERS + DIGITS;
+  function rnd(n) {
+    var a = new Uint32Array(1), lim = Math.floor(4294967296 / n) * n;
+    do { (window.crypto || window.msCrypto).getRandomValues(a); } while (a[0] >= lim);
+    return a[0] % n;
+  }
+  function genCode() {
+    var out = [LETTERS.charAt(rnd(26)), DIGITS.charAt(rnd(10))], i, j, t;
+    for (i = 2; i < 8; i++) out.push(ALL.charAt(rnd(ALL.length)));
+    for (i = out.length - 1; i > 0; i--) { j = rnd(i + 1); t = out[i]; out[i] = out[j]; out[j] = t; }
+    return out.join('');
+  }
+  root.__genCode = genCode;
+
+  function copy(text, el) {
+    function ok() { var o = el.title; el.title = 'Đã chép!'; setTimeout(function () { el.title = o; }, 1200); }
+    try { navigator.clipboard.writeText(text).then(ok, function () {}); } catch (e) {}
+  }
+  function esc(s) { return String(s).replace(/[^A-Z0-9]/g, ''); }
+
+  function paint(left) { cnt.textContent = left; fg.style.strokeDashoffset = String(C * (1 - (total - left) / total)); }
+  function showRunning(left) {
+    root.classList.remove('is-done'); root.classList.add('is-running'); btn.disabled = true; btn.title = 'Đang đếm ngược';
+    paint(left); msg.textContent = 'Còn ' + left + ' giây — cứ lướt trang bình thường';
+    fl.hidden = false; flX.hidden = true; flTxt.textContent = 'Còn ' + left + ' giây';
+  }
+  function showDone(code) {
+    root.classList.remove('is-running'); root.classList.add('is-done'); btn.disabled = false; btn.title = 'Bấm để đếm lại';
+    cnt.textContent = '✓'; fg.style.strokeDashoffset = '0';
+    msg.innerHTML = 'Mã của bạn:<span class="wtb-code" title="Bấm để chép mã">' + esc(code) + '</span>';
+    msg.querySelector('.wtb-code').addEventListener('click', function () { copy(code, this); });
+    flTxt.innerHTML = 'Mã: <b title="Bấm để chép mã">' + esc(code) + '</b>';
+    flTxt.querySelector('b').addEventListener('click', function () { copy(code, this); });
+    fl.hidden = false; flX.hidden = false;
+  }
+  function tick(s) {
+    var left = Math.ceil((s.end - Date.now()) / 1000);
+    if (left <= 0) {
+      clearInterval(timer); timer = null;
+      var cur = load() || s; if (!cur.code) { cur.code = genCode(); save(cur); }
+      return showDone(cur.code);
+    }
+    showRunning(left);
+  }
+  function run(s) {
+    if (timer) return; fg.style.transition = 'none'; paint(total); void fg.getBoundingClientRect(); fg.style.transition = '';
+    tick(s); if (!s.code && s.end > Date.now()) timer = setInterval(function () { tick(load() || s); }, 250);
+  }
+  btn.addEventListener('click', function () {
+    if (timer) return;
+    var s = { end: Date.now() + total * 1000, code: '' }; save(s); run(s);
+  });
+  flX.addEventListener('click', function () { fl.hidden = true; });
+  fl.querySelector('img').src = document.querySelector('.wtb-logo').src;
+
+  var prev = load();
+  if (prev) { if (prev.code) showDone(prev.code); else run(prev); }
+})();
+</script>

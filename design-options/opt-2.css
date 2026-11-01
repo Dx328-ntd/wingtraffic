@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+:root{
+  --font:'Be Vietnam Pro',system-ui,sans-serif;--head:'Space Grotesk','Be Vietnam Pro',sans-serif;--mono:Consolas,Menlo,monospace;
+  --bg:#060a14;--surface:#0d1424;--text:#e8eefc;--muted:#8d9bb8;--line:#1c2742;--line-strong:#2a3857;--hover:#141d33;--input:#0a1120;
+  --primary:#38bdf8;--primary-soft:rgba(56,189,248,.14);--on-primary:#04121f;--cta:#22c55e;--on-cta:#04140a;--cta-shadow:0 0 0 1px rgba(34,197,94,.5),0 8px 26px rgba(34,197,94,.28);--ring:rgba(56,189,248,.5);
+  --ok:#4ade80;--warn:#fbbf24;--err:#f87171;--ok-bg:rgba(74,222,128,.14);--warn-bg:rgba(251,191,36,.14);--err-bg:rgba(248,113,113,.14);
+  --c1:#38bdf8;--c2:#4ade80;--r:18px;--r-sm:12px;--r-btn:12px;--gap:16px;--pad:20px;--shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 30px rgba(0,0,0,.35);
+}
+body{background:radial-gradient(900px 480px at 85% -10%,rgba(56,189,248,.13),transparent 60%),radial-gradient(700px 420px at 0% 0%,rgba(34,197,94,.08),transparent 55%),var(--bg);background-attachment:fixed}
+.card,.kpi{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)),var(--surface)}
+.chip,.icon-btn,.btn-line{background:var(--surface)}
+.icon-btn .dot{border-color:var(--surface)}
+.kpi .num{font-size:32px}
+.badge{border:1px solid currentColor}
+th{background:rgba(255,255,255,.02)}
+@media(min-width:861px){
+  .app{display:block}
+  .nav{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:28px;padding:10px 32px;background:rgba(6,10,20,.78);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+  .menu{flex:1;justify-content:center}
+  .menu a.on{box-shadow:inset 0 -2px 0 var(--primary);border-radius:var(--r-sm) var(--r-sm) 0 0;background:var(--primary-soft)}
+  .nav-foot{padding:6px 12px 6px 6px;border-radius:99px;background:var(--surface);border:1px solid var(--line)}
+  .main{max-width:1260px;margin:0 auto;padding:28px 32px 56px}
+  .top{margin-bottom:22px}
+}
+@media(min-width:861px) and (max-width:1180px){.menu a span,.brand small,.nav-foot div:last-child{display:none}.menu a{padding:0 14px}}

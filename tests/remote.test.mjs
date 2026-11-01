@@ -1,0 +1,148 @@
+import os from 'node:os';
+import fs from 'node:fs';
+import path from 'node:path';
+import { RemoteHub, ONLINE_MS, PICKUP_MS, LOST_MS, RUNNING_GRACE_MS } from '../remote.mjs';
+import { normalizeConfig, Agent } from '../agent/agent.mjs';
+import { ProxyPool, pickRotateProfile } from '../proxy-pool.mjs';
+import { manifestDiff } from '../package-hash.mjs';
+
+let pass = 0, fail = 0;
+const t = (name, ok, extra = '') => { console.log(`${ok ? '  PASS' : '  FAIL'}  ${name}${ok ? '' : ' ' + extra}`); ok ? pass++ : fail++; };
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omni-remote-'));
+let clock = 1_000_000;
+const hub = new RemoteHub(path.join(dir, 'agents.json'), { now: () => clock });
+const req = key => ({ headers: key ? { authorization: `Bearer ${key}` } : {} });
+const poll = (a, info = {}, running = []) => { a.lastSeen = clock; return hub.onPoll(a, { info: { threads: 2, freeSlots: [1, 2], omniUp: true, ...info }, running }); };
+
+console.log('\n== Quản lý máy phụ & khoá ==');
+const { agent: a1, key: k1 } = await hub.create('May phu 1');
+const { agent: a2 } = await hub.create('May phu 2');
+t('khoá bắt đầu bằng wt_ và dài đủ', /^wt_[A-Za-z0-9_-]{30,}$/.test(k1));
+t('đĩa chỉ lưu bản băm, không lưu khoá', !fs.readFileSync(hub.file, 'utf8').includes(k1) && /"keyHash": "[0-9a-f]{64}"/.test(fs.readFileSync(hub.file, 'utf8')));
+t('xác thực đúng khoá', hub.authenticate(req(k1))?.id === a1.id);
+t('sai khoá / thiếu khoá bị từ chối', !hub.authenticate(req('wt_sai')) && !hub.authenticate(req()));
+let err = null; try { await hub.create('may phu 1'); } catch (e) { err = e; }
+t('trùng tên (không phân biệt hoa thường) bị từ chối', err?.status === 409);
+err = null; try { await hub.create('<b>'); } catch (e) { err = e; }
+t('tên chứa ký tự lạ bị từ chối', err?.status === 400);
+t('view() không lộ khoá hoặc băm', !/keyHash|wt_/.test(JSON.stringify(hub.view(a1))));
+const hub2 = new RemoteHub(hub.file); await hub2.load();
+t('nạp lại từ đĩa giữ nguyên máy phụ + khoá vẫn dùng được', hub2.agents.size === 2 && hub2.authenticate(req(k1))?.name === 'May phu 1');
+
+console.log('\n== Online / luồng trống ==');
+t('chưa poll = offline, không có luồng trống', !hub.isOnline(a1) && hub.onlineAgents().length === 0);
+poll(a1);
+t('poll xong = online, luồng trống theo báo cáo của máy phụ', hub.isOnline(a1) && hub.freeSlots(a1).join() === '1,2');
+t('capacity = tổng luồng các máy online', hub.capacity() === 2);
+clock += ONLINE_MS + 1;
+t('im lặng quá hạn = offline', !hub.isOnline(a1) && hub.capacity() === 0);
+poll(a1);
+
+console.log('\n== Giao lượt ==');
+const prog = [];
+const j1 = hub.dispatch(a1, 1, { keyword: 'kw' }, { onProgress: p => prog.push(p) });
+t('luồng đã giao việc không còn trong danh sách trống', hub.freeSlots(a1).join() === '2');
+const r1 = poll(a1);
+t('lần poll kế nhận được lượt kèm payload', r1.jobs.length === 1 && r1.jobs[0].id === j1.id && r1.jobs[0].payload.keyword === 'kw');
+t('lượt không bị giao lặp lại ở lần poll sau', poll(a1, {}, [{ jobId: j1.id, step: 'Tìm Google', ip: '1.2.3.4', logs: ['a'] }]).jobs.length === 0);
+t('tiến độ máy phụ báo được chuyển về (bước, IP, log)', prog.at(-1)?.step === 'Tìm Google' && prog.at(-1)?.ip === '1.2.3.4' && prog.at(-1)?.logs[0] === 'a');
+t('máy phụ KHÁC không trả kết quả thay được', hub.onResult(a2, { jobId: j1.id, result: { status: 'ok' } }).ignored === true);
+const done = hub.onResult(a1, { jobId: j1.id, result: { status: 'ok', ip: '1.2.3.4' } });
+t('trả kết quả đúng máy -> promise resolve với kết quả đó', done.ok && (await j1.promise).status === 'ok');
+t('kết quả đến lần hai bị bỏ qua', hub.onResult(a1, { jobId: j1.id, result: { status: 'ok' } }).ignored === true);
+t('đếm lượt hôm nay của máy phụ', hub.view(a1).today.ok === 1);
+const jbad = hub.dispatch(a1, 1, {}); poll(a1);
+hub.onResult(a1, { jobId: jbad.id, result: 'rác' });
+t('kết quả sai định dạng -> lượt lỗi, không làm sập', (await jbad.promise).status === 'error');
+
+console.log('\n== Huỷ lượt ==');
+const jc = hub.dispatch(a1, 1, {}); poll(a1);
+hub.cancel(jc.id);
+t('huỷ lượt -> máy chính nhận kết quả cancelled ngay', (await jc.promise).status === 'cancelled');
+const pc = poll(a1);
+t('máy phụ được báo huỷ ở lần poll kế (đóng trình duyệt)', pc.cancel.includes(jc.id));
+t('lệnh huỷ chỉ gửi một lần', poll(a1).cancel.length === 0);
+const jq = hub.dispatch(a1, 2, {}); hub.cancel(jq.id);
+t('huỷ lượt chưa giao -> không cần báo máy phụ', (await jq.promise).status === 'cancelled' && poll(a1).cancel.length === 0);
+
+console.log('\n== Máy phụ chết / mất liên lạc ==');
+const jp = hub.dispatch(a1, 1, {});
+clock += PICKUP_MS + 1; hub.sweep();
+t('giao mà không ai nhận quá hạn -> lượt lỗi, giải phóng luồng', (await jp.promise).lost === true && hub.freeSlots(a1).includes(1));
+const jr = hub.dispatch(a1, 1, {}); poll(a1);
+clock += RUNNING_GRACE_MS + 2000; poll(a1);
+t('máy phụ khởi động lại giữa lượt -> lượt báo lỗi', (await jr.promise).status === 'error' && /khởi động lại/.test((await jr.promise).error));
+const jl = hub.dispatch(a1, 1, {}); poll(a1); poll(a1, {}, [{ jobId: jl.id, step: 'x' }]);
+clock += LOST_MS + 1000; hub.sweep();
+t('mất liên lạc quá 3 phút khi đang chạy -> lượt lỗi', (await jl.promise).status === 'error');
+const jg = hub.dispatch(a1, 1, {}); poll(a1); poll(a1, {}, [{ jobId: jg.id, step: 'x' }]);
+clock += 30000; poll(a1, {}, [{ jobId: jg.id, step: 'x' }]);
+t('đang được báo đều -> lượt không bị coi là mất', hub.jobs.has(jg.id));
+clock += 30000; poll(a1); clock += 31000; poll(a1);
+t('máy phụ khởi động lại sau khi lượt đã chạy -> lượt "ma" được giải phóng, luồng được giao lại', (await jg.promise).status === 'error' && hub.freeSlots(a1).includes(1));
+const jd = hub.dispatch(a1, 1, {}); poll(a1);
+await hub.setEnabled(a1.id, false);
+t('tắt máy phụ -> lượt đang chạy bị đóng và máy phụ offline', (await jd.promise).status === 'error' && !hub.isOnline(a1));
+await hub.setEnabled(a1.id, true);
+const jk = hub.dispatch(a1, 1, {}); poll(a1);
+const rot = await hub.rotateKey(a1.id);
+t('đổi khoá -> khoá cũ vô hiệu, khoá mới dùng được, lượt đang chạy bị đóng', !hub.authenticate(req(k1)) && hub.authenticate(req(rot.key))?.id === a1.id && (await jk.promise).status === 'error');
+await hub.remove(a2.id);
+const hub3 = new RemoteHub(hub.file); await hub3.load();
+t('xoá máy phụ (cả trên đĩa)', !hub.agents.has(a2.id) && hub3.agents.size === 1);
+
+console.log('\n== Cấu hình máy phụ (agent.config.json) ==');
+const ok = normalizeConfig({ server: 'https://wingtraffic.tech/', key: 'wt_abcdefghijklmnopqrstuvwxyz', threads: 99, proxy: { mode: 'omni', profiles: [' a ', '', 'b'] } });
+t('chuẩn hoá: bỏ dấu / cuối, giới hạn luồng, làm sạch tên profile', ok.server === 'https://wingtraffic.tech' && ok.threads === 64 && ok.proxy.profiles.join() === 'a,b');
+t('thiếu địa chỉ máy chính -> lỗi dễ hiểu', (() => { try { normalizeConfig({ key: 'wt_abcdefghijklmnopqrstuvwxyz' }); } catch (e) { return /server/.test(e.message); } })());
+t('khoá sai dạng -> lỗi dễ hiểu', (() => { try { normalizeConfig({ server: 'https://x.y', key: 'abc' }); } catch (e) { return /key/.test(e.message); } })());
+
+console.log('\n== Luồng trống phía máy phụ ==');
+const ag = new Agent(normalizeConfig({ server: 'https://x.y', key: 'wt_abcdefghijklmnopqrstuvwxyz', threads: 3, minFreeMemMB: 200, memPerThreadMB: 0, proxy: { mode: 'omni', profiles: ['a', 'b', 'c'], rotateSec: 300 } }), { omni: {}, pool: {}, monitor: {} });
+ag.omni_.up = true;
+t('OmniLogin sẵn sàng + đủ RAM -> báo đủ 3 luồng', ag.freeSlots().join() === '1,2,3');
+ag.lastRun[1] = Date.now();
+t('chế độ profile cố định: luồng vừa chạy phải chờ đủ rotateSec mới báo trống', ag.freeSlots().join() === '2,3');
+ag.omni_.up = false;
+t('OmniLogin tắt -> không nhận lượt', ag.freeSlots().length === 0);
+ag.omni_.up = true; ag.quotaDay = new Date().toLocaleDateString('sv-SE');
+t('hết lượt tạo profile trong ngày -> không nhận lượt', ag.freeSlots().length === 0);
+ag.quotaDay = null; ag.limitCap = 1; ag.limitAt = Date.now();
+t('gói OmniLogin hết chỗ profile -> tự giảm số luồng', ag.maxThreads() === 1);
+
+console.log('\n== Xoay tua profile (số profile > số luồng) ==');
+const R = 300000, now0 = 10_000_000;
+t('chọn profile nghỉ lâu nhất trong số profile rảnh đã đủ rotateSec', pickRotateProfile(['a', 'b', 'c'], new Set(), { a: now0 - 400000, b: now0 - 900000, c: now0 - 350000 }, R, now0) === 'b');
+t('bỏ qua profile đang chạy', pickRotateProfile(['a', 'b'], new Set(['b']), { a: now0 - 400000, b: now0 - 900000 }, R, now0) === 'a');
+t('bỏ qua profile chưa đủ rotateSec; không có profile nào sẵn sàng -> null', pickRotateProfile(['a', 'b'], new Set(), { a: now0 - 10000, b: now0 - 20000 }, R, now0) === null);
+t('profile chưa từng dùng được ưu tiên', pickRotateProfile(['a', 'b'], new Set(), { a: now0 - 400000 }, R, now0) === 'b');
+const pp = new ProxyPool(path.join(dir, 'pp.json')); pp.configure({ mode: 'omni', profiles: ['a', 'b', 'c', 'd'] });
+t('pool: profile do engine chọn thắng thứ tự luồng; tên lạ -> theo thứ tự luồng', pp.next(1, 'd').profileName === 'd' && pp.next(2, 'zzz').profileName === 'b' && pp.next(3).profileName === 'c');
+const agR = new Agent(normalizeConfig({ server: 'https://x.y', key: 'wt_abcdefghijklmnopqrstuvwxyz', threads: 2, minFreeMemMB: 200, memPerThreadMB: 0, proxy: { mode: 'omni', profiles: ['a', 'b', 'c', 'd'], rotateSec: 300 } }), { omni: {}, pool: { configure() {}, save() {} }, monitor: {}, run: () => new Promise(() => {}) });
+agR.omni_.up = true;
+t('xoay tua: 4 profile / 2 luồng -> báo đủ 2 luồng trống', agR.freeSlots().join() === '1,2');
+agR.startJob({ id: 'j1', slot: 1, payload: { keyword: 'k', settings: {} } });
+agR.startJob({ id: 'j2', slot: 2, payload: { keyword: 'k', settings: {} } });
+const used = [...agR.jobs.values()].map(j => j.profile);
+t('xoay tua: hai lượt đầu lấy hai profile KHÁC nhau', used[0] && used[1] && used[0] !== used[1]);
+t('xoay tua: hết luồng thì không báo trống', agR.freeSlots().length === 0);
+agR.jobs.delete('j1'); agR.jobs.delete('j2');
+t('xoay tua: xong lượt, hai profile vừa dùng phải nghỉ đủ rotateSec; 2 profile còn lại được dùng trước', agR.freeSlots().join() === '1,2' && !agR.readyProfiles(agR.cfg.proxy, 300000).some(n => used.includes(n)));
+
+console.log('\n== Nhắc cập nhật file sang máy phụ ==');
+const want = { 'agent/agent.mjs': 'aaa', 'workflow/worker.mjs': 'bbb', 'proxy-pool.mjs': 'ccc' };
+t('manifestDiff: giống hệt -> rỗng', manifestDiff({ ...want }, want).length === 0);
+t('manifestDiff: file khác nội dung + file thiếu đều bị liệt kê', manifestDiff({ 'agent/agent.mjs': 'aaa', 'workflow/worker.mjs': 'XXX' }, want).join() === 'proxy-pool.mjs,workflow/worker.mjs');
+const hubM = new RemoteHub(path.join(dir, 'agents-m.json'), { now: () => clock, manifest: () => want });
+const { agent: am, key: km } = await hubM.create('May M');
+const pollM = async info => hubM.handle({ method: 'POST', headers: { authorization: `Bearer ${km}` }, [Symbol.asyncIterator]: async function* () { yield JSON.stringify({ info }); } }, { writeHead() {}, end() {} }, new URL('http://x/api/agent/poll'));
+await pollM({ threads: 1, freeSlots: [] });
+t('máy phụ bản cũ chưa báo file -> outdated = null (chưa rõ)', hubM.view(am).outdated === null);
+await pollM({ threads: 1, freeSlots: [], files: { 'agent/agent.mjs': 'aaa', 'workflow/worker.mjs': 'old' } });
+t('máy phụ chép sót -> liệt kê đúng file cần cập nhật', hubM.view(am).outdated.join() === 'proxy-pool.mjs,workflow/worker.mjs');
+await pollM({ threads: 1, freeSlots: [], files: { ...want } });
+t('máy phụ đủ bản -> outdated rỗng', hubM.view(am).outdated.length === 0);
+
+fs.rmSync(dir, { recursive: true, force: true });
+console.log(`\nKết quả: ${pass} PASS, ${fail} FAIL`);
+process.exit(fail ? 1 : 0);

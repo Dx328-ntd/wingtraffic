@@ -1,0 +1,41 @@
+{
+  "name": "omni-google-search",
+  "version": "1.0.0",
+  "description": "Tim kiem Google bang tu khoa tren profile OmniLogin",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "db:init": "node --env-file-if-exists=.env database/init.mjs",
+    "db:import": "node --env-file-if-exists=.env database/import-tasks.mjs",
+    "db:fix-keywords": "node --env-file-if-exists=.env database/fix-keywords.mjs",
+    "seed:admin": "node --env-file-if-exists=.env database/seed-admin.mjs",
+    "proxy:check": "node --env-file-if-exists=.env proxy-check.mjs",
+    "test": "node tests/repo.test.mjs",
+    "test:register": "node tests/register.test.mjs",
+    "test:engine": "node tests/engine.test.mjs",
+    "test:auth": "node tests/auth.test.mjs",
+    "test:roles": "node tests/roles.test.mjs",
+    "test:api": "node tests/api.test.mjs",
+    "test:pricing": "node tests/pricing.test.mjs",
+    "test:wallet": "node tests/wallet.test.mjs",
+    "test:ui": "node tests/ui.test.mjs",
+    "test:gate": "node tests/gate.test.mjs && node tests/gate-api.test.mjs",
+    "test:progress": "node tests/users-progress.test.mjs",
+    "test:hide": "node tests/hide-export.test.mjs",
+    "test:upgrades": "node tests/upgrades.test.mjs",
+    "test:footer": "node tests/footer-check.test.mjs && node tests/footer-flow.test.mjs",
+    "test:remote": "node tests/remote.test.mjs",
+    "build:may-phu": "node build-may-phu.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@omnilogin/sdk": "^0.1.0",
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^13.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "nopecha": "^1.0.11"
+  },
+  "type": "module",
+  "main": "server.mjs"
+}

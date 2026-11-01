@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Đăng nhập — WingTraffic</title>
+<meta name="robots" content="noindex" />
+<link rel="stylesheet" href="/ui.css" />
+<style>
+  body { justify-content: center; padding: 24px 16px; }
+  .auth { width: 100%; max-width: 400px; margin: auto; }
+  .auth .card { padding: 22px; margin-bottom: 12px; }
+  .auth h1 { font-size: 18px; display: flex; align-items: center; gap: 9px; }
+  .auth h1 .logo {
+    width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; flex: none;
+    background: linear-gradient(140deg, var(--primary), #1d4ed8); color: #fff; font-weight: 800; font-size: 15px;
+  }
+  .auth .sub { color: var(--muted); font-size: 13px; margin: 8px 0 18px; }
+  .auth .field { margin-bottom: 12px; }
+  .pw { position: relative; }
+  .pw input { padding-right: 40px; }
+  .pw button {
+    position: absolute; right: 5px; top: 50%; transform: translateY(-50%); border: 0; background: none;
+    cursor: pointer; font-size: 15px; line-height: 1; color: var(--muted); padding: 6px;
+  }
+  .caps { color: var(--warn); font-size: 12px; margin-top: 6px; display: none; }
+  .caps.show { display: block; }
+  .links { color: var(--muted); font-size: 12.5px; line-height: 1.8; }
+  .links code { font-size: 11px; word-break: break-all; }
+  .theme-row { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<main class="auth">
+  <div class="theme-row">
+    <button class="btn sm icon" id="wtTheme" type="button" aria-label="Đổi chế độ hiển thị"></button>
+  </div>
+
+  <div class="card">
+    <img class="auth-logo" src="/logo-full.png" alt="WingTraffic" width="360" height="100">
+    <p class="sub">Hệ thống quản lý chiến dịch. Dùng tài khoản do quản trị viên cấp hoặc tự đăng ký ở cổng công khai.</p>
+    <div id="msg" class="alert err" role="alert" hidden></div>
+    <form id="f" autocomplete="on">
+      <div class="field">
+        <label for="u">Tên đăng nhập</label>
+        <input id="u" name="username" type="text" autocomplete="username" required autofocus />
+      </div>
+      <div class="field">
+        <label for="p">Mật khẩu</label>
+        <div class="pw">
+          <input id="p" name="password" type="password" autocomplete="current-password" required />
+          <button type="button" id="pwToggle" title="Hiện/ẩn mật khẩu" aria-label="Hiện hoặc ẩn mật khẩu">👁</button>
+        </div>
+        <div class="caps" id="caps">⚠ CapsLock đang bật — mật khẩu sẽ bị sai chữ hoa/thường.</div>
+      </div>
+      <button class="btn primary big wide" id="btn" type="submit">Đăng nhập</button>
+    </form>
+  </div>
+
+  <div class="card links">
+    Chưa có tài khoản? <a href="/gioi-thieu#dang-ky"><b>Đăng ký</b></a>
+  </div>
+</main>
+<script src="/ui.js"></script>
+<script>
+  var UI = window.WingTrafficUI;
+  var $ = UI.$;
+
+  (function () { var b = document.getElementById('wtTheme'); UI.theme(); if (b) b.addEventListener('click', function () { UI.themeButton(); }); })();
+
+  function setMsg(text, kind) {
+    var el = $('msg');
+    if (!text) { el.hidden = true; el.textContent = ''; return; }
+    el.hidden = false;
+    el.className = 'alert ' + (kind === 'ok' ? 'ok' : kind === 'err' ? 'err' : 'info');
+    el.textContent = text;
+  }
+
+  var pw = $('p');
+  var toggle = $('pwToggle');
+  toggle.addEventListener('click', function () {
+    var show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password';
+    toggle.textContent = show ? '🙈' : '👁';
+    toggle.title = show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu';
+    pw.focus();
+  });
+  var caps = $('caps');
+  ['keydown', 'keyup'].forEach(function (ev) {
+    pw.addEventListener(ev, function (e) {
+      if (typeof e.getModifierState !== 'function') return;
+      caps.classList.toggle('show', pw.type === 'password' && e.getModifierState('CapsLock'));
+    });
+  });
+
+  var next = new URLSearchParams(location.search).get('next') || '';
+  if (!next || next.charAt(0) !== '/' || next.indexOf('\\') !== -1 || next.charAt(1) === '/') next = '';
+
+  function home(role) { return next || (role === 'admin' ? '/admin' : '/my'); }
+
+  UI.api('/api/me', undefined, { noRedirect: true })
+    .then(function (d) { if (d && d.user) location.replace(home(d.user.role)); })
+    .catch(function () {});
+
+  $('f').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    setMsg('');
+    try {
+      await UI.withButton($('btn'), async function () {
+        var d = await UI.api('/api/login', { username: $('u').value.trim(), password: pw.value }, { noRedirect: true });
+        setMsg('Đăng nhập thành công, đang chuyển trang...', 'ok');
+        location.replace(home(d.user && d.user.role));
+      });
+    } catch (err) {
+      setMsg(err.message, 'err');
+      pw.select();
+    }
+  });
+</script>
+</body>
+</html>
+

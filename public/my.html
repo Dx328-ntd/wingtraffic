@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WingTraffic — Chiến dịch của tôi</title>
+<meta name="robots" content="noindex" />
+<link rel="stylesheet" href="/ui.css" />
+<style>
+  :root { --s-ok: #10b981; --s-nf: #ef4444; --s-cp: #f59e0b; --s-er: #9ca3af; }
+  @media (prefers-color-scheme: dark) { :root { --s-ok: #34d399; --s-nf: #f87171; --s-cp: #fbbf24; --s-er: #6b7280; } }
+  html[data-theme="light"] { --s-ok: #10b981; --s-nf: #ef4444; --s-cp: #f59e0b; --s-er: #9ca3af; }
+  html[data-theme="dark"] { --s-ok: #34d399; --s-nf: #f87171; --s-cp: #fbbf24; --s-er: #6b7280; }
+  .full { grid-column: 1 / -1; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+  .stat { border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface-2); }
+  .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  progress { width: 110px; height: 10px; accent-color: var(--ok); vertical-align: middle; }
+  .tile.tile-link { cursor: pointer; transition: filter .15s, transform .15s; }
+  .tile.tile-link:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .tile.tile-link:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+  @media (min-width: 901px) { #tblCampaigns th.ctr, #tblCampaigns td.ctr { text-align: center; } #tblCampaigns th:nth-child(4), #tblCampaigns td:nth-child(4) { text-align: left; } }
+  .filters.center { justify-content: center; }
+  @media (max-width: 600px) { #tblDaily th, #tblDaily td { padding: 8px 4px; font-size: 12px; white-space: normal; } #tblDaily th { line-height: 1.2; vertical-align: bottom; } #tblDaily th:first-child, #tblDaily td:first-child { padding-left: 8px; } }
+  .chart-bar { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+  .chart-bar .zoom button { padding: 3px 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 3px; min-height: 28px; }
+  .chart-bar .zoom button[aria-pressed="true"] { background: var(--primary-btn); border-color: var(--primary-btn); color: #fff; }
+  .chart-bar input[type="date"] { width: auto; padding: 3px 6px; font-size: 12px; min-height: 30px; }
+  .tp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .tp-head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .tp-ico { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--primary-bg); font-size: 18px; flex: none; }
+  .tp-name { font-weight: 700; font-size: 15px; }
+  .tp-tag { color: var(--muted); font-size: 12.5px; }
+  .tp-tbl td, .tp-tbl th { padding: 8px 6px; }
+  .tp-tbl td.num b { color: var(--primary); }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+  .notif { border-bottom: 1px solid var(--border-2); padding: 10px 0; }
+  .notif:last-child { border-bottom: 0; }
+  .notif b { font-size: 13.5px; }
+  .notif .at { color: var(--muted); font-size: 12px; }
+  .notif.unread { background: var(--row); border-radius: var(--radius-xs); padding-left: 8px; }
+  .live { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  #chart svg { display: block; }
+  #liveEvents { max-height: 180px; }
+  @media (max-width: 900px) { .g2 { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) { #tblKeywords td:first-child, #tblRuns td:nth-child(2), #tblWorkers td:nth-child(2) { min-width: 150px; } }
+</style>
+<style id="my-theme">
+body.my .crumbs { display: none; }
+.app-top .tbtn { position: relative; text-decoration: none; }
+.app-top .tbtn:hover { text-decoration: none; }
+.app-top .tbtn .sn-badge { position: absolute; top: -5px; right: -5px; margin: 0; }
+.app-top .btn.cta { min-height: 40px; padding: 0 18px; }
+.umenu { position: relative; }
+.umenu > summary { list-style: none; display: flex; align-items: center; gap: 9px; padding: 4px 12px 4px 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); cursor: pointer; font-size: 13px; font-weight: 600; min-height: 40px; }
+.umenu > summary::-webkit-details-marker { display: none; }
+.umenu > summary:hover { background: var(--row); }
+.umenu .av { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--primary-btn); color: #fff; font-weight: 700; text-transform: uppercase; }
+.umenu .who2 { line-height: 1.15; text-align: left; }
+.umenu .who2 small { display: block; color: var(--muted); font-size: 11px; font-weight: 500; }
+.umenu .pop { position: absolute; right: 0; top: calc(100% + 8px); min-width: 230px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 6px; z-index: 70; }
+.umenu .pop a, .umenu .pop button { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px; padding: 9px 11px; border: 0; background: none; color: var(--text); font: inherit; font-size: 13.5px; font-weight: 500; border-radius: 9px; cursor: pointer; text-decoration: none; text-align: left; }
+.umenu .pop a:hover, .umenu .pop button:hover { background: var(--row); text-decoration: none; }
+.umenu .pop .sep { height: 1px; background: var(--border-2); margin: 5px 4px; }
+.umenu .pop .lbl { padding: 6px 11px 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.umenu .pop .out { color: var(--err); font-weight: 600; }
+.umenu .pop .sn-badge { margin-left: auto; }
+@media (max-width: 900px) {
+  .app-top .btn.cta { padding: 0 12px; font-size: 13px; }
+  .umenu .who2 { display: none; }
+  .umenu > summary { padding: 3px; }
+}
+@media (max-width: 480px) { .app-top .btn.cta span.lbl-long { display: none; } }
+</style>
+</head>
+<body class="has-shell my">
+<aside class="app-side" id="appSide" aria-label="Menu chính">
+  <a class="sb-brand" href="/my"><img class="lg-img" src="/logo-icon.png" alt="" width="30" height="30"><span>Wing<em class="wt-b">Traffic</em><small>Chiến dịch traffic</small></span></a>
+  <a class="sn" href="#thong-ke" data-nav="thong-ke"><span class="ic">📊</span>Thống kê</a>
+  <a class="sn" href="#chien-dich" data-nav="chien-dich"><span class="ic">📢</span>Chiến dịch</a>
+  <a class="sn" href="#tao-chien-dich" data-nav="tao-chien-dich"><span class="ic">＋</span>Tạo chiến dịch</a>
+  <a class="sn" href="#ngan-sach" data-nav="ngan-sach"><span class="ic">💳</span>Ngân sách</a>
+  <a class="sn" href="#bang-gia" data-nav="bang-gia"><span class="ic">🏷</span>Bảng giá</a>
+  <a class="sn" href="#tai-khoan-cua-toi" data-nav="tai-khoan-cua-toi"><span class="ic">👤</span>Tài khoản</a>
+</aside>
+<div class="app-back" id="sideBack"></div>
+
+<header class="app-top">
+  <button class="tbtn" id="sideToggle" type="button" aria-label="Ẩn/hiện menu">☰</button>
+  <span class="sp"></span>
+  <a class="btn cta" href="#tao-chien-dich">＋ <span class="lbl-long">Tạo chiến dịch</span></a>
+  <a class="tbtn" href="#thong-bao" id="bell" aria-label="Thông báo" title="Thông báo">🔔<span class="sn-badge" id="snNotifBadge" hidden></span></a>
+  <button class="tbtn" id="wtTheme" type="button" aria-label="Đổi chế độ hiển thị" style="font-size:16px"></button>
+  <details class="umenu" id="uMenu">
+    <summary><span class="av" id="userAv">?</span><span class="who2"><span id="userName">…</span><small id="userRole"></small></span></summary>
+    <div class="pop">
+      <a href="#tai-khoan-cua-toi">👤 Tài khoản của tôi</a>
+      <div id="adminLinks" hidden>
+        <div class="sep"></div>
+        <div class="lbl">Quản trị</div>
+        <a href="/admin">🛡 Quản trị<span class="sn-badge" id="snAdminBadge" hidden></span></a>
+        <a href="/campaign" id="engineLink">⚙ Cấu hình chạy</a>
+        <a href="/test">▶ Chạy thử</a>
+      </div>
+      <div class="sep"></div>
+      <button class="out" id="btnLogout" type="button">⎋ Đăng xuất</button>
+    </div>
+  </details>
+</header>
+
+<main class="main app-content">
+  <div class="crumbs"><span id="crumbTitle">Thống kê</span></div>
+
+  <section class="view" data-view="thong-ke" id="v-thong-ke">
+    <h1 class="view-title">Thống kê</h1>
+    <div id="annBox" hidden>
+      <div class="ann">
+        <div class="t" id="annTitle"></div>
+        <div class="b" id="annBody"></div>
+        <div class="m" id="annAt"></div>
+      </div>
+      <div class="ann-more"><a href="#thong-bao">» Các thông báo khác</a></div>
+    </div>
+
+    <div class="sec-title">Tổng quan</div>
+    <div class="tiles" id="tiles"></div>
+    <div hidden><div class="live" style="margin-top:12px">
+      <span><i class="dot" id="dotRun"></i> <span id="liveText">Đang kết nối…</span></span>
+      <span id="badgeBox"></span>
+      <span style="margin-left:auto"><button class="btn sm" id="btnReload" type="button">↻ Tải lại</button></span>
+    </div></div>
+
+    <div class="sec-title">Báo cáo chiến dịch</div>
+    <div class="filters center" style="margin-bottom:10px">
+      <select id="chartType" style="max-width:190px"><option value="">Chọn loại chiến dịch</option></select>
+      <select id="chartCampaign" style="max-width:260px"><option value="">Tất cả chiến dịch</option></select>
+      <select id="chartMonth" style="max-width:150px"></select>
+      <a class="btn" id="btnExport" href="/api/export/campaigns.xlsx" download title="Mọi chiến dịch (kể cả đã ẩn), từ khi tạo tài khoản tới nay, từng ngày – từng chiến dịch">⬇ Xuất Excel</a>
+    </div>
+    <div class="hint" style="text-align:center;margin:-4px 0 10px">“Xuất Excel”: thống kê traffic <b>mọi chiến dịch</b> (kể cả đã ẩn) <b>từ khi tạo tài khoản tới nay</b>, từng ngày – từng chiến dịch.</div>
+    <div class="card panel">
+      <div class="tbl-wrap"><table id="tblDaily">
+        <thead><tr><th>Ngày</th><th class="num">Số hiển thị</th><th class="num">Lượt truy cập</th><th class="num">Chi phí (đ)</th><th class="num">Ctr (%)</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="sec-title">Đồ thị chiến dịch</div>
+    <div class="card panel">
+      <div class="chart-bar">
+        <span class="zoom">Zoom <button type="button" data-zoom="1m" aria-pressed="true">1m</button><button type="button" data-zoom="3m" aria-pressed="false">3m</button><button type="button" data-zoom="6m" aria-pressed="false">6m</button><button type="button" data-zoom="ytd" aria-pressed="false">YTD</button><button type="button" data-zoom="1y" aria-pressed="false">1y</button><button type="button" data-zoom="all" aria-pressed="false">All</button></span>
+        <span class="range">From <input type="date" id="chFrom" aria-label="Từ ngày" /> To <input type="date" id="chTo" aria-label="Đến ngày" /></span>
+      </div>
+      <div class="legend" id="chartLegend">
+        <span><i style="background:#2563eb"></i>Hiển thị</span><span><i style="background:#16a34a"></i>Truy cập</span>
+        <span><i style="background:#dc2626"></i>Chi phí</span><span><i style="background:#d97706"></i>Ctr</span>
+      </div>
+      <div id="chart"></div>
+    </div>
+
+    <div hidden>
+      <div class="stats" id="summary"></div>
+      <table id="tblKeywords"><thead><tr><th>Từ khóa</th><th>Lượt</th><th>ok</th><th>không thấy</th><th>xác minh</th><th>lỗi</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div hidden>
+    <details class="card fold" id="runsCard">
+      <summary><span class="ft">Lượt chạy gần đây</span></summary>
+      <div class="fold-body">
+        <div class="tbl-wrap"><table id="tblRuns">
+          <thead><tr><th>Thời gian</th><th>Từ khóa</th><th>Trạng thái</th><th>Thiết bị</th><th class="num">Giây</th><th class="num">Vị trí</th><th>IP</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </details>
+    <details class="card fold" id="liveCard">
+      <summary><span class="ft">Đang chạy</span> <span class="u" id="liveAt"></span></summary>
+      <div class="fold-body">
+        <div class="tbl-wrap"><table id="tblWorkers">
+          <thead><tr><th>Luồng</th><th>Từ khóa</th><th>Bước</th><th class="num">Đã chạy</th><th>IP</th><th class="num">RAM/CPU</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <pre id="liveEvents"></pre>
+      </div>
+    </details>
+    </div>
+  </section>
+
+  <section class="view" data-view="chien-dich" id="v-chien-dich" hidden>
+    <h1 class="view-title">Quản lý chiến dịch</h1>
+    <div class="card filters">
+      <input type="search" id="fId" placeholder="Id" aria-label="Lọc theo ID" />
+      <input type="search" id="fSearch" placeholder="Từ khóa / tên chiến dịch" aria-label="Lọc theo từ khóa" />
+      <input type="search" id="fDomain" placeholder="Domain" aria-label="Lọc theo domain" />
+      <button class="btn" id="btnFind" type="button">Tìm</button>
+      <a class="btn add" href="#tao-chien-dich">+ Thêm chiến dịch</a>
+    </div>
+
+    <div class="card" id="editCard" hidden>
+      <h2>Sửa chiến dịch <span class="u" id="editWho"></span></h2>
+      <div class="fields">
+        <div><label for="eKeyword">Từ khóa (chỉ từ khóa — đừng dán URL)</label><input type="text" id="eKeyword" /></div>
+        <div><label for="eUrl">URL đích</label><input type="text" id="eUrl" /></div>
+        <div class="full"><label for="eQueryMode">Kiểu truy vấn gõ lên Google</label><select id="eQueryMode"></select></div>
+        <div><label for="eType">Loại</label><select id="eType"></select></div>
+        <div><label for="eCount">Số lượt mỗi kỳ</label><input type="number" id="eCount" min="1" max="10000" /></div>
+        <div><label for="eUnit">Đơn vị</label><select id="eUnit"><option value="day">lượt / ngày</option><option value="hour">lượt / giờ</option></select></div>
+        <div><label for="eNote">Ghi chú</label><input type="text" id="eNote" /></div>
+      </div>
+      <div class="row-actions" style="margin-top:10px">
+        <button class="btn primary" id="btnSaveEdit">Lưu &amp; gửi duyệt lại</button>
+        <button class="btn" id="btnCancelEdit">Huỷ</button>
+        <span class="msg" id="editMsg"></span>
+      </div>
+    </div>
+
+    <div class="card panel" style="margin-top:14px">
+      <div class="ctabs" id="campTabs" role="tablist" aria-label="Lọc chiến dịch theo trạng thái"></div>
+      <div class="tbl-wrap stack"><table id="tblCampaigns" class="tbl-stack">
+        <thead><tr>
+          <th>ID</th><th>Chiến dịch</th><th>Loại traffic</th><th>Chỉ tiêu</th><th class="ctr">Vị trí Google</th><th>Cập nhật vị trí</th><th>Trạng thái</th><th class="ctr">Tiến độ hôm nay</th><th>Thao tác</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="msg" id="campMsg" style="margin-top:8px"></div>
+      <div class="hint"><span id="campCount"></span></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="tao-chien-dich" id="v-tao-chien-dich" hidden>
+    <h1 class="view-title">Tạo chiến dịch mới</h1>
+    <div class="card panel" id="footerNote" style="max-width:900px;margin-bottom:16px">
+      <div class="alert warn" role="note" style="margin-bottom:10px">
+        <b>📌 Yêu cầu trước khi gửi duyệt:</b> vui lòng cài <b>mã HTML WingTraffic</b> bên dưới vào <b>footer</b> của website đích (website có URL đích của chiến dịch).
+      </div>
+      <ol style="margin:0 0 10px 20px;line-height:1.7">
+        <li>Bấm <b>Sao chép mã</b> (chỉ 1 dòng <code>&lt;script&gt;</code>).</li>
+        <li>Dán vào footer website. WordPress: <i>Giao diện → Tùy biến (hoặc Widget) → Footer → thêm khối “HTML tùy chỉnh”</i>; hoặc dán vào file <code>footer.php</code> ngay trước thẻ <code>&lt;/body&gt;</code>.</li>
+        <li>Lưu lại, mở website và kiểm tra thấy huy hiệu <b>WingTraffic</b> ở chân trang.</li>
+      </ol>
+      <div class="row-actions">
+        <button class="btn primary" id="btnCopyFooter" type="button">📋 Sao chép mã</button>
+        <span class="msg" id="copyMsg" role="status"></span>
+      </div>
+      <input id="footerCode" type="text" readonly aria-label="Mã HTML dán vào footer" style="margin-top:10px;font:13px Consolas,monospace" onfocus="this.select()">
+    </div>
+    <div class="card panel" style="max-width:900px">
+      <div class="fields">
+        <div class="full">
+          <label for="fType">Loại chiến dịch</label>
+          <select id="fType"></select>
+          <div class="hint" id="typeHint"></div>
+        </div>
+        <div class="full"><label for="fKeyword">Từ khóa (chỉ từ khóa — đừng dán URL)</label><input type="text" id="fKeyword" placeholder="vd: keo truc tuyen" /></div>
+        <div class="full"><label for="fUrl">URL đích</label><input type="text" id="fUrl" placeholder="https://example.com" /></div>
+        <div class="full">
+          <label for="fQueryMode">Kiểu truy vấn gõ lên Google</label>
+          <select id="fQueryMode"></select>
+          <div class="hint" id="queryHint"></div>
+        </div>
+        <div><label for="fCount">Số lượt mỗi kỳ</label><input type="number" id="fCount" min="1" max="10000" value="10" /></div>
+        <div><label for="fUnit">Đơn vị</label><select id="fUnit"><option value="day">lượt / ngày</option><option value="hour">lượt / giờ</option></select></div>
+        <div><label for="fStart">Bắt đầu (tuỳ chọn)</label><input type="datetime-local" id="fStart" /></div>
+        <div><label for="fEnd">Kết thúc (tuỳ chọn)</label><input type="datetime-local" id="fEnd" /></div>
+        <div class="full"><label for="fNote">Ghi chú gửi admin (tuỳ chọn)</label><textarea id="fNote" placeholder="Mục tiêu chiến dịch, thời gian muốn chạy…"></textarea></div>
+      </div>
+      <div class="row-actions" style="margin-top:10px">
+        <button class="btn cta" id="btnCreate">Gửi duyệt</button>
+        <span class="msg" id="createMsg"></span>
+      </div>
+      <div class="hint" id="limitHint"></div>
+    </div>
+  </section>
+
+  <section class="view" data-view="bang-gia" id="v-bang-gia" hidden>
+    <h1 class="view-title">Bảng giá traffic</h1>
+    <p class="u" style="margin:0 0 12px">Trả theo từng lượt xem hoàn thành. Giá tính theo <b>loại traffic</b> và <b>thời gian ở lại</b> của mỗi lượt. Lượt lỗi/xác minh được chạy lại và không tính tiền.</p>
+    <div class="tp-grid" id="priceGrid"></div>
+    <div class="hint" id="priceNote"></div>
+  </section>
+
+  <section class="view" data-view="tai-khoan-cua-toi" id="v-tai-khoan-cua-toi" hidden>
+    <h1 class="view-title">Tài khoản của tôi</h1>
+    <div class="card panel" style="max-width:640px">
+      <div class="card-head"><h2>Thông tin</h2></div>
+      <div class="fields">
+        <div class="full"><label for="acUser">Tên đăng nhập</label><input type="text" id="acUser" readonly /></div>
+        <div class="full"><label for="acName">Tên hiển thị (không bắt buộc)</label><input type="text" id="acName" maxlength="80" placeholder="vd: Nguyễn Văn A" autocomplete="name" /></div>
+      </div>
+      <div class="row-actions" style="margin-top:10px"><button class="btn primary" id="btnAcName" type="button">Lưu tên hiển thị</button><span class="msg" id="acNameMsg" role="status"></span></div>
+    </div>
+    <div class="card panel" style="max-width:640px;margin-top:16px">
+      <div class="card-head"><h2>Đổi mật khẩu</h2></div>
+      <div class="fields">
+        <div class="full"><label for="acCur">Mật khẩu hiện tại</label><input type="password" id="acCur" autocomplete="current-password" /></div>
+        <div class="full"><label for="acNew">Mật khẩu mới (từ 8 ký tự)</label><input type="password" id="acNew" autocomplete="new-password" /></div>
+        <div class="full"><label for="acNew2">Nhập lại mật khẩu mới</label><input type="password" id="acNew2" autocomplete="new-password" /></div>
+      </div>
+      <div class="row-actions" style="margin-top:10px"><button class="btn primary" id="btnAcPass" type="button">Đổi mật khẩu</button><span class="msg" id="acPassMsg" role="status"></span></div>
+      <div class="hint" style="margin-top:8px">Đổi xong, các thiết bị khác đang đăng nhập tài khoản này sẽ phải <b>đăng nhập lại</b>; thiết bị bạn đang dùng giữ nguyên. Nhập sai mật khẩu hiện tại nhiều lần sẽ bị khoá tạm vài phút.</div>
+    </div>
+  </section>
+
+  <section class="view" data-view="ngan-sach" id="v-ngan-sach" hidden>
+    <h1 class="view-title">Quản lý ngân sách</h1>
+    <div class="tiles t5" id="balTiles"></div>
+    <div class="card panel" style="margin-top:16px">
+      <div class="card-head">
+        <h2>Giao dịch gần đây</h2>
+        <div class="card-actions">
+          <div class="seg" id="txnTabs" role="tablist" aria-label="Loại giao dịch">
+            <button type="button" data-kind="topup" aria-pressed="true">Nạp tiền</button>
+            <button type="button" data-kind="bonus" aria-pressed="false">Khuyến mại</button>
+          </div>
+          <button class="btn sm" id="btnWalletReload" type="button">↻ Cập nhật</button>
+        </div>
+      </div>
+      <div class="tbl-wrap stack"><table id="tblTxn" class="tbl-stack">
+        <thead><tr><th>Ngày</th><th>Mã giao dịch</th><th class="num">Số tiền</th><th class="num">USDT</th><th class="num">Tỷ giá</th><th>Phương thức thanh toán</th><th>Trạng thái</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="hint">Cập nhật lúc <span id="walletAt">—</span>. Số dư tự trừ theo từng lượt chạy thành công; hết tiền, chiến dịch tự tạm dừng và có thông báo.</div>
+    </div>
+  </section>
+
+  <section class="view" data-view="thong-bao" id="v-thong-bao" hidden>
+    <h1 class="view-title">Thông báo <span class="u" id="notifCount"></span></h1>
+    <div class="card panel">
+      <div class="row-actions" style="margin:0 0 8px"><button class="btn sm" id="btnReadAll">Đánh dấu đã đọc tất cả</button></div>
+      <div id="notifs"></div>
+    </div>
+  </section>
+
+  <div class="modal" id="topupModal" hidden>
+    <div class="sheet">
+      <header>Nạp thêm ngân sách</header>
+      <div class="body" id="topupBody"></div>
+      <footer><button class="btn primary" id="topupClose" type="button">Đóng</button></footer>
+    </div>
+  </div>
+
+  <div class="modal" id="logModal" hidden>
+    <div class="sheet" style="max-width:1100px;width:100%">
+      <header id="logTitle">Log chi tiết</header>
+      <div class="body">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px">
+          <select id="logKw" aria-label="Từ khóa"><option value="">Tất cả từ khóa</option></select>
+          <input type="date" id="logFrom" aria-label="Từ ngày" title="Từ ngày" />
+          <input type="date" id="logTo" aria-label="Đến ngày" title="Đến ngày" />
+          <button class="btn sm primary" id="logApply" type="button">Xác nhận</button>
+          <button class="btn sm" id="logDownload" type="button">Tải xuống</button>
+          <button class="btn sm" id="logHistoryBtn" type="button" style="margin-left:auto">Lịch sử tải xuống</button>
+        </div>
+        <div style="overflow:auto;max-height:52vh">
+          <table id="logTable">
+            <thead><tr><th class="num">STT</th><th>Từ khóa</th><th>IP</th><th>User Agent</th><th class="nw">Thời gian</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="logPager" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px"></div>
+        <div id="logHistory" hidden style="margin-top:12px">
+          <b>Lịch sử tải xuống</b>
+          <div style="overflow:auto;max-height:30vh;margin-top:6px">
+            <table id="logHistoryTable">
+              <thead><tr><th class="nw">Thời gian</th><th>Người tải</th><th>Từ khóa</th><th class="nw">Từ ngày</th><th class="nw">Đến ngày</th><th class="num">Số dòng</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <footer><button class="btn primary" id="logClose" type="button">Đóng</button></footer>
+    </div>
+  </div>
+
+  <script src="/ui.js"></script>
+  <script>
+    const UI = window.WingTrafficUI;
+    const $ = id => document.getElementById(id);
+    let META = null;
+    let CAMPAIGNS = [];
+    let live = null;
+    let editing = null;
+    let SUMMARY = null;
+    let WALLET = null;
+    let campTab = 'all';
+    let txnKind = 'topup';
+    async function api(path, opts = {}) {
+      const init = { credentials: 'same-origin', ...opts };
+      if (opts.body) init.headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      const r = await fetch(path, init);
+      const text = await r.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
+      if (r.status === 401) { location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search)); throw new Error('Phiên đăng nhập đã hết hạn.'); }
+      if (!r.ok) throw new Error((data && data.error) || `HTTP ${r.status}`);
+      return data;
+    }
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const setMsg = (id, text, kind) => { const e = $(id); e.textContent = text || ''; e.className = 'msg' + (kind ? ' ' + kind : ''); };
+    const stat = (v, label) => `<div class="stat"><b>${Number(v || 0)}</b><span>${esc(label)}</span></div>`;
+    const fromInput = v => (v ? String(v).replace('T', ' ') + ':00' : '');
+    const toInput = v => (v ? String(v).replace(' ', 'T').slice(0, 16) : '');
+    const fmtAt = s => String(s || '').replace(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2}).*$/, '$4 $3/$2/$1');
+    const fmtDay = s => String(s || '').replace(/^(\d{4})-(\d{2})-(\d{2}).*$/, '$3/$2/$1');
+    const BADGE = { pending: 'chờ duyệt', approved: 'đã duyệt', rejected: 'từ chối' };
+    const BADGE_VI = { pending: 'Chờ duyệt', approved: 'Đã duyệt', rejected: 'Không được duyệt' };
+    const RUN_LABEL = { idle: 'chưa chạy', running: 'đang chạy', paused: 'tạm dừng', done: 'đủ chỉ tiêu hôm nay', stopped: 'đã dừng' };
+    const RUN_VI = { idle: 'Chưa chạy', running: 'Đang bật', paused: 'Tạm dừng', done: 'Đủ chỉ tiêu hôm nay', stopped: 'Đã dừng' };
+    const statusBtn = (id, status, label, cls) => `<button class="${cls}" data-status="${id}:${status}">${esc(label)}</button>`;
+
+    const VIEWS = {
+      'thong-ke': { title: 'Thống kê', group: null },
+      'chien-dich': { title: 'Chiến dịch', group: 'chien-dich' },
+      'tao-chien-dich': { title: 'Tạo chiến dịch', group: 'chien-dich' },
+      'thong-bao': { title: 'Thông báo', group: null },
+      'ngan-sach': { title: 'Ngân sách', group: 'tai-khoan' },
+      'bang-gia': { title: 'Bảng giá', group: 'tai-khoan' },
+      'tai-khoan-cua-toi': { title: 'Tài khoản của tôi', group: 'tai-khoan' },
+      };
+    const HASH_ALIAS = { notifs: 'thong-bao' };
+    document.addEventListener('click', e => { const m = document.getElementById('uMenu'); if (m && m.open && (!m.contains(e.target) || e.target.closest('.pop a, .pop button'))) m.open = false; });
+    async function loadFooterCode() {
+      const code = '<scr' + 'ipt async src="' + location.origin + '/wt-badge.js"></scr' + 'ipt>';
+      $('footerCode').value = code;
+      return code;
+    }
+    async function copyFooterCode() {
+      try {
+        const code = await loadFooterCode();
+        try { await navigator.clipboard.writeText(code); }
+        catch { const ta = $('footerCode'); ta.focus(); ta.select(); if (!document.execCommand('copy')) throw new Error('trình duyệt chặn sao chép — hãy chọn mã trong ô và nhấn Ctrl+C'); }
+        setMsg('copyMsg', 'Đã sao chép! Dán vào footer website của bạn.', 'ok');
+      } catch (e) { setMsg('copyMsg', 'Không sao chép được: ' + e.message, 'err'); }
+    }
+    const initShell = () => UI.shell({ views: VIEWS, alias: HASH_ALIAS, def: 'thong-ke', onView: n => { if (n === 'thong-ke') redrawChart(); if (n === 'tai-khoan-cua-toi') loadAccount(); if (n === 'tao-chien-dich') loadFooterCode().catch(() => {}); } });
+
+    function nav(badge) {
+      const unread = badge?.unread ?? (nav.last ? nav.last.unread : 0);
+      const pending = badge?.pending ?? (nav.last ? nav.last.pending : null);
+      nav.last = { unread, pending };
+      UI.setSideBadge('snNotifBadge', unread);
+      UI.setSideBadge('snAdminBadge', pending);
+    }
+
+    function paintUser() {
+      const me = META?.me || {};
+      $('userName').textContent = me.username || '—';
+      $('userAv').textContent = String(me.username || '?').charAt(0);
+      $('userRole').textContent = me.role === 'admin' ? 'Quản trị viên' : 'Người dùng';
+      $('adminLinks').hidden = me.role !== 'admin';
+    }
+
+    function fillQueryModes() {
+      const opts = (META.queryModes || []).map(m => `<option value="${m.id}" title="${esc(m.desc)}">${esc(m.label)}</option>`).join('');
+      $('fQueryMode').innerHTML = opts;
+      $('eQueryMode').innerHTML = opts;
+      queryHint();
+    }
+
+    function queryHint() {
+      const m = (META.queryModes || []).find(x => x.id === $('fQueryMode').value);
+      $('queryHint').textContent = m ? m.desc : '';
+    }
+
+    async function pricesFromPublicPage() {
+      const html = await (await fetch('/bang-gia', { cache: 'no-store' })).text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      return [...doc.querySelectorAll('.tp[data-kind]')].map(el => ({
+        kind: el.dataset.kind,
+        name: (el.querySelector('.tp-name') || {}).textContent || el.dataset.kind,
+        tagline: (el.querySelector('.tp-tag') || {}).textContent || '',
+        campaignType: ['search', 'direct'].includes(el.dataset.kind) ? el.dataset.kind : null,
+        tiers: [...el.querySelectorAll('[data-tp]')].map(td => ({ seconds: Number(td.dataset.tp.split('-')[1]), price: Number(td.dataset.price) })),
+      }));
+    }
+    async function paintPrices() {
+      let list = META.trafficPrices || [];
+      if (!list.length) { try { list = await pricesFromPublicPage(); } catch { list = []; } }
+      if (!list.length) { $('priceGrid').innerHTML = '<div class="hint">Chưa tải được bảng giá — bấm Ctrl+F5 hoặc thử lại sau.</div>'; return; }
+      const ICON = { search: '🔎', direct: '🌐', social: '📣', backlink: '🔗' };
+      const money = n => Number(n).toLocaleString('vi-VN') + 'đ';
+      $('priceGrid').innerHTML = list.map(t => `<div class="card panel tp">
+        <div class="tp-head"><span class="tp-ico" aria-hidden="true">${ICON[t.kind] || '💳'}</span>
+          <div><div class="tp-name">${esc(t.name)}</div><div class="tp-tag">${esc(t.tagline)}</div></div></div>
+        <div class="tbl-wrap"><table class="tp-tbl"><thead><tr><th>Ở lại</th><th class="num">Giá / lượt xem</th></tr></thead><tbody>
+          ${t.tiers.map(x => `<tr><td>${x.seconds} giây</td><td class="num"><b>${money(x.price)}</b></td></tr>`).join('')}
+        </tbody></table></div>
+        ${t.campaignType ? '<div class="hint">Chọn khi <a href="#tao-chien-dich">tạo chiến dịch</a>.</div>' : '<div class="hint">Đặt riêng theo yêu cầu — liên hệ admin để xác nhận nguồn traffic.</div>'}
+      </div>`).join('');
+      $('priceNote').textContent = META.priceEffectiveFrom
+        ? `Giá áp dụng từ ngày ${META.priceEffectiveFrom} cho đến khi có thông báo mới. Đơn vị tính là 1 lượt xem hoàn thành.` : '';
+    }
+
+    function fillTypes() {
+      const opts = META.types.map(t => `<option value="${t.id}">${esc(t.label)}</option>`).join('');
+      $('fType').innerHTML = opts;
+      $('eType').innerHTML = opts;
+      typeHint();
+    }
+    function typeHint() {
+      const t = META.types.find(x => x.id === $('fType').value);
+      if (!t) { $('typeHint').textContent = ''; return; }
+      const sec = t.engine.dwellMax + t.engine.subpages * t.engine.subDwellMax + 30;
+      const mins = Math.round(sec / 6) / 10;
+      $('typeHint').textContent = `${t.desc} · Ở lại ${t.engine.dwellMin}–${t.engine.dwellMax}s, ${t.engine.subpages} trang con`
+        + ` (${t.engine.subDwellMin}–${t.engine.subDwellMax}s) ⇒ ≈ ${mins} phút/lượt.`;
+    }
+
+    async function loadMeta() {
+      META = await api('/api/meta');
+      paintUser();
+      fillTypes();
+      paintPrices().catch(() => {});
+      $('chartType').innerHTML = '<option value="">Chọn loại chiến dịch</option>' + META.types.map(t => '<option value="' + t.id + '">' + esc(t.label) + '</option>').join('');
+      if (!$('chartMonth').options.length) { fillMonths(); const r = zoomRange(ZOOM); $('chFrom').value = r.from; $('chTo').value = r.to; }
+      fillQueryModes();
+      nav();
+      if (!META.engine.dbMode) {
+        document.querySelector('main.main').insertAdjacentHTML('afterbegin',
+          '<div class="alert err" style="margin-bottom:14px"><b>Engine chưa dùng CSDL</b> (thiếu better-sqlite3?) — chiến dịch sẽ không chạy. Xem mục “Cài đặt” trong Hướng dẫn sử dụng.</div>');
+      }
+    }
+
+    async function loadSummary() {
+      const s = await api('/api/stats/summary');
+      SUMMARY = s.summary;
+      $('summary').innerHTML = stat(s.summary.todayAttempts, 'Lượt hôm nay') + stat(s.summary.total, 'Tổng lượt')
+        + stat(s.summary.todayOk, 'ok hôm nay') + stat(s.summary.captcha, 'xác minh') + stat(s.summary.error, 'lỗi');
+      paintTiles();
+    }
+
+    const vnd = n => Number(n || 0).toLocaleString('vi-VN') + 'đ';
+    let balLast = null;
+    let RANKS = {};
+
+    const tile = (cls, ico, value, label, extra = '') => `<div class="tile ${cls}"><b>${value}</b><span>${esc(label)}${extra}</span><i class="ico">${ico}</i></div>`;
+    const topupBtn = '<button class="tbtn2 js-topup" type="button">+ Nạp thêm</button>';
+
+    function goRunning() { campTab = 'running'; renderCampaigns(); if (location.hash === '#chien-dich') window.scrollTo(0, 0); else location.hash = '#chien-dich'; }
+    function paintTiles() {
+      const approved = CAMPAIGNS.filter(c => !c.hidden && c.approval === 'approved');
+      const running = approved.filter(c => c.status === 'running').length;
+      $('tiles').innerHTML =
+        tile('t-orange', '📣', `${running} / ${approved.length}`, 'Chiến dịch đang chạy')
+        + tile('t-cyan', '⇄', Number(SUMMARY ? SUMMARY.todayAttempts : 0).toLocaleString('vi-VN'), 'Lượt chạy hôm nay')
+        + tile('t-green', '＄', WALLET ? vnd(WALLET.balance) : '—', 'Số dư còn lại', topupBtn);
+      const orange = $('tiles').querySelector('.t-orange');
+      if (orange) {
+        orange.classList.add('tile-link'); orange.setAttribute('role', 'link'); orange.tabIndex = 0; orange.title = 'Xem các chiến dịch đang chạy';
+        orange.onclick = goRunning;
+        orange.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goRunning(); } };
+      }
+    }
+
+    function paintBalance(d) {
+      $('balTiles').innerHTML =
+        tile('t-orange', '＄', vnd(d.balance), 'Ngân sách còn lại', topupBtn)
+        + tile('t-cyan', '＄', vnd(d.spent), 'Ngân sách đã chạy')
+        + tile('t-green', '＄', vnd(d.toppedUp), 'Ngân sách đã nạp')
+        + tile('t-teal', '＄', vnd(d.bonus), 'Khuyến mại')
+        + tile('t-purple', '＄', vnd((d.toppedUp || 0) + (d.bonus || 0)), 'Tổng ngân sách');
+    }
+
+    const METHOD_LABEL = { usdt: 'Thanh toán qua USDT', bank: 'Chuyển khoản ngân hàng', manual: 'Quản trị viên nạp' };
+    const TXN_STATUS = { success: ['Thành công', 'p-approved'], pending: ['Đang chờ', 'p-pending'], cancelled: ['Đã huỷ', 'p-rejected'] };
+    function txnRows(list) {
+      return (list || []).length
+        ? list.map(t => {
+            const st = TXN_STATUS[t.status] || [t.status || '—', 'p-idle'];
+            return `<tr>
+              <td data-label="Ngày">${esc(fmtAt(t.at))}</td>
+              <td data-label="Mã giao dịch"><code>${esc(t.code || '')}</code></td>
+              <td class="num" data-label="Số tiền"><b>${t.amount > 0 ? '+' : ''}${vnd(t.amount)}</b></td>
+              <td class="num" data-label="USDT">${t.usdt ? esc(t.usdt) : '—'}</td>
+              <td class="num" data-label="Tỷ giá">${t.rate ? Number(t.rate).toLocaleString('vi-VN') : '—'}</td>
+              <td data-label="Phương thức thanh toán">${esc(METHOD_LABEL[t.method] || t.method || '—')}${t.note ? `<div class="cell-sub">${esc(t.note)}</div>` : ''}</td>
+              <td data-label="Trạng thái"><span class="pill ${st[1]}">${esc(st[0])}</span></td>
+            </tr>`;
+          }).join('')
+        : '<tr><td colspan="7" class="u">Chưa có giao dịch nào.</td></tr>';
+    }
+    async function loadTxns() {
+      const d = await api('/api/wallet/transactions?limit=100&kind=' + encodeURIComponent(txnKind));
+      $('tblTxn').tBodies[0].innerHTML = txnRows(d.items);
+    }
+
+    function copyRow(id, label, value) {
+      return value
+        ? `<div class="row-actions" style="gap:6px;margin:0 0 8px"><b>${esc(label)}:</b>`
+          + `<code id="${id}">${esc(value)}</code>`
+          + `<button class="btn sm" data-copy="#${id}">Sao chép</button></div>`
+        : '';
+    }
+    function openTopup() {
+      const r = (WALLET && WALLET.receive) || {};
+      $('topupBody').innerHTML = (r.usdtAddress || r.accountNo
+        ? `<div class="hint" style="margin:0 0 10px">Chuyển <b>USDT (mạng ${esc(r.usdtNetwork || 'TRC20')})</b> tới địa chỉ dưới rồi báo quản trị viên xác nhận. Tỷ giá quy đổi đang áp dụng: <b>${Number(r.usdtRate || 0).toLocaleString('vi-VN')}đ / 1 USDT</b>.</div>`
+        : '<div class="hint">Quản trị viên chưa cấu hình ví nhận tiền — hãy liên hệ để biết chỗ chuyển tiền.</div>')
+        + copyRow('walletUsdt', 'USDT', r.usdtAddress)
+        + copyRow('walletBank', 'Ngân hàng', [r.bankName, r.accountNo].filter(Boolean).join(' · '))
+        + copyRow('walletOwner', 'Chủ tài khoản', r.accountName)
+        + (r.note ? `<div class="hint">${esc(r.note)}</div>` : '');
+      $('topupBody').querySelectorAll('[data-copy]').forEach(b => {
+        b.onclick = () => UI.copy((document.querySelector(b.dataset.copy) || {}).textContent || '');
+      });
+      $('topupModal').hidden = false;
+    }
+
+    function deviceLabel(r) {
+      if (r.device) return (r.device_kind === 'mobile' ? '📱 ' : r.device_kind === 'desktop' ? '🖥 ' : '') + r.device;
+      if (r.device_kind === 'mobile') return '📱 di động';
+      if (r.device_kind === 'desktop') return '🖥 máy tính';
+      return '—';
+    }
+
+    const fmtRankAt = s => String(s || '').replace(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2}).*$/, '$4 $3/$2/$1');
+    const rankPos = d => (d && d.position != null ? '#' + d.position : '-');
+    function rankText(id) {
+      const r = RANKS[id] || {};
+      return `<div title="Máy tính">🖥 <b>${rankPos(r.desktop)}</b></div><div title="Điện thoại">📱 <b>${rankPos(r.mobile)}</b></div>`;
+    }
+    function rankTimeText(id) {
+      const r = RANKS[id] || {};
+      const t = d => (d && d.at ? esc(fmtRankAt(d.at)) : '-');
+      return `<div class="u">${t(r.desktop)}</div><div class="u">${t(r.mobile)}</div>`;
+    }
+
+    function paintRanks() {
+      for (const c of CAMPAIGNS) {
+        const el = $('rk' + c.id), tm = $('rt' + c.id);
+        if (el) el.innerHTML = rankText(c.id);
+        if (tm) tm.innerHTML = rankTimeText(c.id);
+      }
+    }
+
+    function splitKeywordUrlField(kwId, urlId) {
+      const kw = $(kwId), url = $(urlId);
+      const m = /(?:https?:\/\/|www\.)[^\s]+/i.exec(kw.value);
+      if (!m) return;
+      kw.value = kw.value.split(m[0]).join(' ').replace(/\s+/g, ' ').trim();
+      if (!url.value.trim()) url.value = m[0].replace(/[),.;]+$/, '');
+    }
+
+    function bindKeywordSplit(kwId, urlId) {
+      const kw = $(kwId);
+      kw.addEventListener('paste', () => setTimeout(() => splitKeywordUrlField(kwId, urlId), 0));
+      kw.addEventListener('change', () => splitKeywordUrlField(kwId, urlId));
+    }
+
+    async function loadWallet() {
+      const d = await api('/api/wallet');
+      WALLET = d;
+      balLast = d.balance;
+      $('walletAt').textContent = new Date().toLocaleTimeString('vi-VN');
+      paintBalance(d);
+      paintTiles();
+    }
+
+    const TABS = [
+      ['all', 'Tất cả', c => !c.hidden],
+      ['pending', 'Chờ duyệt', c => !c.hidden && c.approval === 'pending'],
+      ['running', 'Đang chạy', c => !c.hidden && c.approval === 'approved' && c.status === 'running'],
+      ['paused', 'Tạm dừng / Đã dừng', c => !c.hidden && c.approval === 'approved' && ['idle', 'paused', 'stopped'].includes(c.status)],
+      ['rejected', 'Không được duyệt', c => !c.hidden && c.approval === 'rejected'],
+      ['done', 'Đủ chỉ tiêu hôm nay', c => !c.hidden && c.approval === 'approved' && c.status === 'done'],
+      ['hidden', 'Đã ẩn', c => !!c.hidden],
+    ];
+    function paintTabs() {
+      $('campTabs').innerHTML = TABS.map(([k, label, fn]) =>
+        `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === campTab}">${esc(label)}(${CAMPAIGNS.filter(fn).length})</button>`).join('');
+      $('campTabs').querySelectorAll('button').forEach(b => { b.onclick = () => { campTab = b.dataset.tab; renderCampaigns(); }; });
+    }
+    function visibleCampaigns() {
+      const fn = (TABS.find(t => t[0] === campTab) || TABS[0])[2];
+      const id = $('fId').value.trim(), kw = $('fSearch').value.trim().toLowerCase(), dom = $('fDomain').value.trim().toLowerCase();
+      return CAMPAIGNS.filter(c => fn(c)
+        && (!id || String(c.id).includes(id))
+        && (!kw || `${c.keyword} ${c.name || ''}`.toLowerCase().includes(kw))
+        && (!dom || String(c.targetUrl || '').toLowerCase().includes(dom)));
+    }
+
+    function footerBadge(c) {
+      const f = c.footerCheck || {};
+      const t = { ok: ['p-approved', '✔ Đã cài mã footer'], missing: ['p-rejected', '⚠ Chưa thấy mã footer'], error: ['p-pending', '? Chưa kiểm tra được'] }[f.status] || ['p-idle', '… Đang kiểm tra mã footer'];
+      return `<div class="cell-sub"><span class="pill ${t[0]}" title="${esc(f.note || '')}">${t[1]}</span>${f.status === 'ok' ? '' : ` <button class="btn sm" type="button" data-fcheck="${c.id}" title="Tải lại website của bạn và kiểm tra mã footer">↻ Kiểm tra lại</button>`}${f.status === 'missing' ? '<div class="cell-sub">Hãy dán mã HTML WingTraffic vào footer website (xem hướng dẫn ở “Tạo chiến dịch”).</div>' : ''}</div>`;
+    }
+    async function recheckFooter(id, btn) {
+      btn.disabled = true; btn.textContent = 'Đang kiểm tra…';
+      try {
+        const d = await api(`/api/campaigns/${id}/footer-check`, { method: 'POST', body: '{}' });
+        const f = d.footer || {};
+        UI.toast(f.status === 'ok' ? '✔ Đã thấy mã WingTraffic trên website của bạn.' : `⚠ ${esc(f.note || 'Chưa thấy mã footer.')}`, f.status === 'ok' ? 'ok' : 'warn', 9000);
+        await refresh();
+      } catch (e) { UI.fail(e.message); btn.disabled = false; btn.textContent = '↻ Kiểm tra lại'; }
+    }
+
+    function renderCampaigns() {
+      paintTabs();
+      const tb = $('tblCampaigns').tBodies[0];
+      const list = visibleCampaigns();
+      const cc = $('campCount');
+      const shown = CAMPAIGNS.filter(c => !c.hidden).length;
+      if (cc) cc.textContent = CAMPAIGNS.length ? `Hiển thị ${list.length}/${campTab === 'hidden' ? CAMPAIGNS.length - shown : shown} chiến dịch` : '';
+      if (!list.length) {
+        tb.innerHTML = `<tr><td colspan="9" class="u">${CAMPAIGNS.length ? 'Không có chiến dịch nào khớp bộ lọc.' : 'Chưa có chiến dịch nào — bấm “+ Thêm chiến dịch” để tạo.'}</td></tr>`;
+        paintTiles();
+        return;
+      }
+      tb.innerHTML = list.map(c => {
+        const acts = [];
+        if (c.hidden) {
+          acts.push(`<button class="btn sm primary" data-unhide="${c.id}">Bỏ ẩn</button>`);
+          acts.push(`<button class="btn sm" data-log="${c.id}">Log chi tiết</button>`);
+        } else {
+          if (c.status === 'running') acts.push(statusBtn(c.id, 'paused', 'Tạm dừng', 'btn sm amber'));
+          else if (c.approval === 'approved') acts.push(statusBtn(c.id, 'running', 'Chạy', 'btn sm primary'));
+          if (['running', 'paused'].includes(c.status)) acts.push(statusBtn(c.id, 'stopped', 'Dừng', 'btn sm'));
+          acts.push(`<button class="btn sm blue" data-edit="${c.id}">Sửa</button>`);
+          acts.push(`<button class="btn sm" data-hide="${c.id}" title="Ẩn chiến dịch (không xoá được, thống kê vẫn được giữ)">Ẩn</button>`);
+          acts.push(`<button class="btn sm" data-log="${c.id}" title="Xem từng lượt truy cập: từ khóa, IP, user agent, thời gian">Log chi tiết</button>`);
+        }
+        return `<tr>
+          <td data-label="ID">${c.id}</td>
+          <td data-label=""><b>${esc(c.keyword)}</b><div class="cell-sub">🔗 <a href="${esc(c.targetUrl)}" target="_blank" rel="noopener">${esc(c.targetUrl)}</a></div>${footerBadge(c)}<div class="cell-sub">🕒 ${esc(fmtAt(c.createdAt))}</div>${c.queryMode !== 'keyword' ? `<div class="cell-sub">🔍 truy vấn gửi Google: ${esc(c.query)}</div>` : ''}${c.note ? `<div class="cell-sub">📝 ${esc(c.note)}</div>` : ''}${c.rejectReason ? `<div class="cell-sub" style="color:var(--err)">Lý do: ${esc(c.rejectReason)}</div>` : ''}</td>
+          <td data-label="Loại traffic">${esc(c.typeLabel)}<div class="cell-sub">${c.unit === 'hour' ? 'theo giờ' : 'theo ngày'}</div></td>
+          <td class="nw" data-label="Chỉ tiêu">${c.count} lượt/${c.unit === 'hour' ? 'giờ' : 'ngày'}<div class="cell-sub">≈ ${c.perDay} lượt/ngày</div></td>
+          <td id="rk${c.id}" class="nw ctr" data-label="Vị trí Google"></td>
+          <td id="rt${c.id}" class="nw" data-label="Cập nhật vị trí"></td>
+          <td data-label="Trạng thái"><span class="pill p-${c.approval}">${esc(BADGE_VI[c.approval] || c.approval)}</span><br><span class="pill p-${c.status}">${esc(RUN_VI[c.status] || c.status)}</span></td>
+          <td id="pv${c.id}" class="ctr" data-label="Tiến độ hôm nay"><b>${Number(c.today.ok || 0).toLocaleString('vi-VN')}</b></td>
+          <td data-label="Thao tác"><div class="row-actions" style="margin:0">${acts.join('')}</div></td>
+        </tr>`;
+      }).join('');
+      tb.querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => openEdit(Number(b.dataset.edit)); });
+      tb.querySelectorAll('[data-fcheck]').forEach(b => { b.onclick = () => recheckFooter(Number(b.dataset.fcheck), b); });
+      tb.querySelectorAll('[data-log]').forEach(b => { b.onclick = () => openLog(Number(b.dataset.log)); });
+      tb.querySelectorAll('[data-hide]').forEach(b => { b.onclick = () => hideCampaign(Number(b.dataset.hide), true); });
+      tb.querySelectorAll('[data-unhide]').forEach(b => { b.onclick = () => hideCampaign(Number(b.dataset.unhide), false); });
+      tb.querySelectorAll('[data-status]').forEach(b => {
+        const [id, status] = b.dataset.status.split(':');
+        b.onclick = () => setStatus(Number(id), status, b);
+      });
+      if (live) paintProgress(live);
+      paintRanks();
+      paintTiles();
+    }
+
+    async function loadCampaigns() {
+      const d = await api('/api/campaigns');
+      CAMPAIGNS = d.campaigns;
+      RANKS = d.ranks || {};
+      const L = d.limits;
+      $('limitHint').textContent = L
+        ? `Đang bật ${L.active} chiến dịch`
+          + ` · ${L.pending}/${L.maxPending} chờ duyệt · tổng ${L.total}/${L.maxTotal} chiến dịch`
+          + ` · ${L.todayRuns} lượt hôm nay`
+        : '';
+      const sel = $('chartCampaign'), cur = sel.value;
+      sel.innerHTML = '<option value="">Tất cả chiến dịch</option>' + CAMPAIGNS.map(c => `<option value="${c.id}">${esc(c.keyword)}${c.hidden ? ' (đã ẩn)' : ''}</option>`).join('');
+      sel.value = cur;
+      renderCampaigns();
+    }
+    let progressSig = '';
+    function paintProgress(d) {
+      const sig = (d.tasks || []).map(t => t.dbId + ':' + (t.dbToday ?? 0)).join(',');
+      if (sig === progressSig) return;
+      const first = progressSig === '';
+      progressSig = sig;
+      if (!first) loadCampaigns().catch(() => {});
+    }
+
+    function openEdit(id) {
+      const c = CAMPAIGNS.find(x => x.id === id);
+      if (!c) return;
+      editing = id;
+      $('editWho').textContent = `#${c.id} (${c.approval === 'approved' ? 'đã duyệt — sửa xong phải chờ duyệt lại' : BADGE[c.approval] || c.approval})`;
+      $('eKeyword').value = c.keyword;
+      $('eUrl').value = c.targetUrl;
+      $('eQueryMode').value = c.queryMode || 'keyword';
+      if (![...$('eType').options].some(o => o.value === c.type)) $('eType').add(new Option(c.typeLabel || c.type, c.type));
+      $('eType').value = c.type;
+      $('eCount').value = c.count;
+      $('eUnit').value = c.unit;
+      $('eNote').value = c.note || '';
+      $('editCard').hidden = false;
+      $('editCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setMsg('editMsg', '');
+    }
+
+    async function saveEdit() {
+      if (!editing) return;
+      const body = {
+        keyword: $('eKeyword').value.trim(), targetUrl: $('eUrl').value.trim(), type: $('eType').value,
+        queryMode: $('eQueryMode').value,
+        count: Number($('eCount').value), unit: $('eUnit').value, note: $('eNote').value.trim(),
+      };
+      try {
+        await api(`/api/campaigns/${editing}`, { method: 'PATCH', body: JSON.stringify(body) });
+        setMsg('editMsg', 'Đã lưu — chờ admin duyệt lại.', 'ok');
+        $('editCard').hidden = true;
+        editing = null;
+        await refresh();
+      } catch (e) { setMsg('editMsg', e.message, 'err'); }
+    }
+    async function create() {
+      const body = {
+        type: $('fType').value, keyword: $('fKeyword').value.trim(), targetUrl: $('fUrl').value.trim(),
+        queryMode: $('fQueryMode').value,
+        count: Number($('fCount').value), unit: $('fUnit').value, note: $('fNote').value.trim(),
+        startAt: fromInput($('fStart').value), endAt: fromInput($('fEnd').value),
+      };
+      $('btnCreate').classList.add('loading');
+      $('btnCreate').disabled = true;
+      setMsg('createMsg', 'Đang gửi…');
+      try {
+        const d = await api('/api/campaigns', { method: 'POST', body: JSON.stringify(body) });
+        const note = `Đã gửi chiến dịch #${d.campaign.id} — chờ admin duyệt rồi hệ thống tự chạy.`;
+        setMsg('createMsg', note, 'ok');
+        UI.ok(note);
+        $('fKeyword').value = '';
+        $('fUrl').value = '';
+        $('fNote').value = '';
+        await refresh();
+        campTab = 'pending';
+        renderCampaigns();
+        location.hash = '#chien-dich';
+      } catch (e) { setMsg('createMsg', e.message, 'err'); UI.fail(e.message); } finally { $('btnCreate').classList.remove('loading'); $('btnCreate').disabled = false; }
+    }
+
+    async function setStatus(id, status, el) {
+      if (el) el.disabled = true;
+      try {
+        await api(`/api/campaigns/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) });
+        const note = `Đã chuyển chiến dịch #${id} sang "${RUN_LABEL[status] || status}".`
+          + (['paused', 'stopped'].includes(status) ? ' Các lượt đang chạy dở sẽ được huỷ trong vài giây (không tính vào thống kê, không trừ tiền).' : '');
+        setMsg('campMsg', note, 'ok');
+        UI.ok(note);
+        CAMPAIGNS = [];
+        await loadCampaigns();
+        await loadSummary();
+      } catch (e) { setMsg('campMsg', e.message, 'err'); } finally { if (el) el.disabled = false; }
+    }
+
+    let LOG_ID = 0;
+    let LOG_PAGE = 1;
+    let LOG_KW_LOADED = false;
+    function logQuery(extra = {}) {
+      const p = new URLSearchParams();
+      if ($('logKw').value) p.set('keyword', $('logKw').value);
+      if ($('logFrom').value) p.set('from', $('logFrom').value);
+      if ($('logTo').value) p.set('to', $('logTo').value);
+      Object.entries(extra).forEach(([k, v]) => p.set(k, v));
+      return p.toString();
+    }
+    async function loadLog(page) {
+      LOG_PAGE = page || 1;
+      const tb = $('logTable').tBodies[0];
+      tb.innerHTML = '<tr><td colspan="5" class="u">Đang tải…</td></tr>';
+      const d = await api(`/api/campaigns/${LOG_ID}/log?` + logQuery({ page: LOG_PAGE }));
+      if (!LOG_KW_LOADED) {
+        $('logKw').innerHTML = '<option value="">Tất cả từ khóa</option>' + d.keywords.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('');
+        LOG_KW_LOADED = true;
+      }
+      tb.innerHTML = d.rows.length
+        ? d.rows.map(r => `<tr><td class="num">${r.n}</td><td>${esc(r.keyword)}</td><td class="nw">${esc(r.ip)}</td><td style="word-break:break-word">${r.userAgent ? esc(r.userAgent) : '—'}</td><td class="nw">${esc(fmtAt(r.at))}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="u">Chưa có lượt truy cập nào khớp bộ lọc.</td></tr>';
+      const pages = Math.max(Math.ceil(d.total / d.pageSize), 1);
+      $('logPager').innerHTML = `<span class="u">${d.total.toLocaleString('vi-VN')} lượt · trang ${d.page}/${pages}</span>` +
+        `<button class="btn sm" id="logPrev" type="button"${d.page <= 1 ? ' disabled' : ''}>‹ Trước</button>` +
+        `<button class="btn sm" id="logNext" type="button"${d.page >= pages ? ' disabled' : ''}>Sau ›</button>`;
+      $('logPrev').onclick = () => loadLog(LOG_PAGE - 1).catch(e => UI.fail(e.message));
+      $('logNext').onclick = () => loadLog(LOG_PAGE + 1).catch(e => UI.fail(e.message));
+    }
+    async function loadLogHistory() {
+      const d = await api(`/api/campaigns/${LOG_ID}/log-exports`);
+      $('logHistoryTable').tBodies[0].innerHTML = d.exports.length
+        ? d.exports.map(x => `<tr><td class="nw">${esc(fmtAt(x.at))}</td><td>${esc(x.by || '—')}</td><td>${esc(x.keyword || 'Tất cả')}</td><td class="nw">${esc(x.fromDay || '—')}</td><td class="nw">${esc(x.toDay || '—')}</td><td class="num">${Number(x.rows).toLocaleString('vi-VN')}</td></tr>`).join('')
+        : '<tr><td colspan="6" class="u">Chưa có lần tải xuống nào.</td></tr>';
+    }
+    function openLog(id) {
+      const c = CAMPAIGNS.find(x => x.id === id);
+      LOG_ID = id;
+      LOG_KW_LOADED = false;
+      $('logTitle').textContent = `Log chi tiết — #${id}${c ? ` “${c.keyword}”` : ''}`;
+      $('logKw').innerHTML = '<option value="">Tất cả từ khóa</option>';
+      $('logFrom').value = '';
+      $('logTo').value = '';
+      $('logHistory').hidden = true;
+      $('logModal').hidden = false;
+      loadLog(1).catch(e => UI.fail(e.message));
+    }
+    $('logApply').onclick = () => loadLog(1).catch(e => UI.fail(e.message));
+    $('logDownload').onclick = () => {
+      location.href = `/api/campaigns/${LOG_ID}/log.csv?` + logQuery();
+      setTimeout(() => { if (!$('logHistory').hidden) loadLogHistory().catch(() => {}); }, 1500);
+    };
+    $('logHistoryBtn').onclick = () => {
+      const show = $('logHistory').hidden;
+      $('logHistory').hidden = !show;
+      if (show) loadLogHistory().catch(e => UI.fail(e.message));
+    };
+    $('logClose').onclick = () => { $('logModal').hidden = true; };
+    $('logModal').addEventListener('click', e => { if (e.target === $('logModal')) $('logModal').hidden = true; });
+    async function hideCampaign(id, hidden) {
+      const c = CAMPAIGNS.find(x => x.id === id) || {};
+      const yes = await UI.confirm(hidden ? {
+        title: 'Ẩn chiến dịch',
+        html: `Ẩn chiến dịch <b>#${id} “${esc(c.keyword || '')}”</b>?<br />Chiến dịch sẽ <b>dừng chạy</b> và chuyển sang tab <b>“Đã ẩn”</b>. Số liệu thống kê <b>vẫn được giữ</b> (xem ở báo cáo và file Excel). Bạn có thể bỏ ẩn bất cứ lúc nào.`,
+        okText: 'Ẩn chiến dịch',
+      } : {
+        title: 'Bỏ ẩn chiến dịch',
+        html: `Đưa chiến dịch <b>#${id} “${esc(c.keyword || '')}”</b> trở lại danh sách? Chiến dịch ở trạng thái <b>đã dừng</b>; bấm <b>Chạy</b> nếu muốn chạy lại.`,
+        okText: 'Bỏ ẩn',
+      });
+      if (!yes) return;
+      try {
+        await api(`/api/campaigns/${id}/hide`, { method: 'POST', body: JSON.stringify({ hidden }) });
+        const note = hidden ? `Đã ẩn chiến dịch #${id} (dừng chạy, vẫn giữ thống kê).` : `Đã bỏ ẩn chiến dịch #${id} (đang ở trạng thái đã dừng).`;
+        setMsg('campMsg', note, 'ok');
+        UI.ok(note);
+        await refresh();
+      } catch (e) { setMsg('campMsg', e.message, 'err'); UI.fail(e.message); }
+    }
+
+    async function refresh() {
+      await Promise.all([loadCampaigns(), loadSummary(), loadWallet(), loadTxns(), loadChart(), loadKeywords(), loadRuns(), loadNotifs()]);
+    }
+
+    const pad2 = n => String(n).padStart(2, '0');
+    const isoDay = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    const DAILY_Q = () => {
+      const q = new URLSearchParams();
+      if ($('chartCampaign').value) q.set('campaignId', $('chartCampaign').value);
+      if ($('chartType').value) q.set('type', $('chartType').value);
+      return q;
+    };
+    function fillMonths() {
+      const now = new Date(), opts = [];
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        opts.push('<option value="' + d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '">Tháng ' + pad2(d.getMonth() + 1) + '/' + d.getFullYear() + '</option>');
+      }
+      $('chartMonth').innerHTML = opts.join('');
+    }
+    let ZOOM = '1m';
+    function zoomRange(z) {
+      const to = new Date(), from = new Date();
+      if (z === '1m') from.setMonth(from.getMonth() - 1);
+      else if (z === '3m') from.setMonth(from.getMonth() - 3);
+      else if (z === '6m') from.setMonth(from.getMonth() - 6);
+      else if (z === '1y') from.setFullYear(from.getFullYear() - 1);
+      else if (z === 'ytd') { from.setMonth(0); from.setDate(1); }
+      else from.setFullYear(from.getFullYear() - 3);
+      return { from: isoDay(from), to: isoDay(to) };
+    }
+    async function loadChart() {
+      await Promise.all([loadReport(), loadLine()]);
+    }
+    async function loadReport() {
+      const [y, m] = $('chartMonth').value.split('-').map(Number);
+      const q = DAILY_Q();
+      q.set('from', y + '-' + pad2(m) + '-01');
+      q.set('to', y + '-' + pad2(m) + '-' + pad2(new Date(y, m, 0).getDate()));
+      try { drawDaily((await api('/api/stats/daily?' + q.toString())).days); }
+      catch (e) { $('tblDaily').tBodies[0].innerHTML = '<tr><td colspan="5" class="msg err">' + esc(e.message) + '</td></tr>'; }
+    }
+    async function loadLine() {
+      const q = DAILY_Q();
+      q.set('from', $('chFrom').value); q.set('to', $('chTo').value);
+      if (!$('chFrom').value || !$('chTo').value) return;
+      try { const d = await api('/api/stats/daily?' + q.toString()); drawChart($('chart'), d.days, { from: $('chFrom').value, to: $('chTo').value }); }
+      catch (e) { $('chart').innerHTML = '<div class="msg err">' + esc(e.message) + '</div>'; }
+    }
+    function setZoom(z) {
+      ZOOM = z;
+      const r = zoomRange(z);
+      $('chFrom').value = r.from; $('chTo').value = r.to;
+      UI.$$('[data-zoom]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.zoom === z)));
+      loadLine();
+    }
+
+    const ctrOf = r => (Number(r.attempts) ? (Number(r.ok) / Number(r.attempts)) * 100 : 0);
+    const fmtNum = n => Number(n || 0).toLocaleString('vi-VN');
+    const fmtCtr = n => (Math.round(n * 100) / 100).toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function drawDaily(rows) {
+      const list = rows.filter(r => Number(r.attempts) > 0 || Number(r.spent) > 0).sort((a, b) => (a.day < b.day ? 1 : -1));
+      const sum = k => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+      const row = (label, r, cls) => '<tr class="' + (cls || '') + '"><td>' + label + '</td><td class="num">' + fmtNum(r.attempts) + '</td><td class="num">' + fmtNum(r.ok)
+        + '</td><td class="num">' + fmtNum(r.spent) + '</td><td class="num">' + fmtCtr(ctrOf(r)) + '</td></tr>';
+      const total = { attempts: sum('attempts'), ok: sum('ok'), spent: sum('spent') };
+      $('tblDaily').tBodies[0].innerHTML = list.length
+        ? row('Tổng', total, 'tr-total') + list.map(r => row(fmtDay(r.day), r)).join('') + row('Tổng', total, 'tr-total')
+        : '<tr><td colspan="5" class="u">Chưa có lượt chạy nào trong tháng này.</td></tr>';
+    }
+
+    let CHART_LAST = null;
+    function redrawChart() { if (CHART_LAST && CHART_LAST.el.clientWidth) drawChart(CHART_LAST.el, CHART_LAST.rows, CHART_LAST.range); }
+    window.addEventListener('resize', UI.debounce(redrawChart, 200));
+    const SERIES = [
+      { k: 'attempts', label: 'Hiển thị', color: '#2563eb', val: r => Number(r.attempts) || 0, fmt: fmtNum },
+      { k: 'ok', label: 'Truy cập', color: '#16a34a', val: r => Number(r.ok) || 0, fmt: fmtNum },
+      { k: 'spent', label: 'Chi phí', color: '#dc2626', val: r => Number(r.spent) || 0, fmt: n => fmtNum(n) + 'đ' },
+      { k: 'ctr', label: 'Ctr', color: '#d97706', val: ctrOf, fmt: n => fmtCtr(n) + '%' },
+    ];
+    function drawChart(el, rows, range) {
+      CHART_LAST = { el, rows, range };
+      const map = new Map(rows.map(r => [r.day, r]));
+      const out = [];
+      const end = new Date(range.to + 'T00:00:00');
+      for (let d = new Date(range.from + 'T00:00:00'); d <= end && out.length < 1200; d.setDate(d.getDate() + 1)) {
+        const day = isoDay(d);
+        out.push({ day, ...(map.get(day) || { attempts: 0, ok: 0, spent: 0 }) });
+      }
+      if (out.length < 2) { el.innerHTML = '<div class="hint">Chọn khoảng ngày dài hơn 1 ngày.</div>'; return; }
+      const W = Math.max(320, Math.round(el.clientWidth || 960)), H = 220, L = 24, Rr = 24, T = 8, B = 22;
+      const x = i => L + (i / (out.length - 1)) * (W - L - Rr);
+      const y = f => T + (1 - f) * (H - T - B);
+      let svg = '';
+      [0, .25, .5, .75, 1].forEach(f => { svg += '<line x1="' + L + '" x2="' + (W - Rr) + '" y1="' + y(f).toFixed(1) + '" y2="' + y(f).toFixed(1) + '" stroke="var(--border-2)" stroke-width="1" />'; });
+      const step = Math.max(1, Math.ceil(out.length / Math.max(2, Math.floor(W / 64))));
+      out.forEach((r, i) => { if (i % step === 0) svg += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" font-size="' + (W < 600 ? 12 : 11) + '" fill="var(--muted)" text-anchor="middle">' + r.day.slice(8) + '/' + r.day.slice(5, 7) + '</text>'; });
+      SERIES.forEach(s => {
+        const vals = out.map(s.val), max = Math.max(...vals) || 1;
+        svg += '<polyline fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linejoin="round" points="' + vals.map((v, i) => x(i).toFixed(1) + ',' + y(v / max).toFixed(1)).join(' ') + '" />';
+      });
+      svg += '<line id="chCursor" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--muted)" stroke-dasharray="3 3" visibility="hidden" />';
+      el.innerHTML = '<div class="chart-wrap" style="position:relative"><svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:240px;touch-action:pan-y" role="img" aria-label="Đồ thị chiến dịch">' + svg + '</svg><div id="chTip" class="chart-tip" hidden></div></div>'
+        + '<div class="hint">Mỗi đường co theo đỉnh của chính nó (0–100%); rê chuột / chạm vào đồ thị để xem giá trị thật theo ngày.</div>';
+      const box = el.querySelector('svg'), tip = el.querySelector('#chTip'), cur = el.querySelector('#chCursor');
+      const show = ev => {
+        const rect = box.getBoundingClientRect(), px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left) / rect.width * W;
+        const i = Math.min(out.length - 1, Math.max(0, Math.round(((px - L) / (W - L - Rr)) * (out.length - 1))));
+        const r = out[i];
+        cur.setAttribute('x1', x(i)); cur.setAttribute('x2', x(i)); cur.setAttribute('visibility', 'visible');
+        tip.innerHTML = '<b>' + fmtDay(r.day) + '</b>' + SERIES.map(s => '<div style="color:' + s.color + '">' + s.label + ': ' + s.fmt(s.val(r)) + '</div>').join('');
+        tip.hidden = false;
+        const tx = x(i) / W * rect.width;
+        tip.style.left = Math.min(Math.max(tx + 10, 0), rect.width - 150) + 'px';
+      };
+      box.addEventListener('mousemove', show); box.addEventListener('touchstart', show, { passive: true }); box.addEventListener('touchmove', show, { passive: true });
+      box.addEventListener('mouseleave', () => { tip.hidden = true; cur.setAttribute('visibility', 'hidden'); });
+    }
+    async function loadKeywords() {
+      const q = new URLSearchParams({ days: '30' });
+      if ($('chartCampaign').value) q.set('campaignId', $('chartCampaign').value);
+      const d = await api('/api/stats/keywords?' + q.toString());
+      $('tblKeywords').tBodies[0].innerHTML = d.keywords.length
+        ? d.keywords.map(k => `<tr><td><b>${esc(k.keyword)}</b><div class="u">${esc(k.targetUrl || '')}</div></td>
+            <td class="num">${k.attempts}</td><td class="num s-ok">${k.ok}</td>
+            <td class="num s-notfound">${k.notfound}</td><td class="num s-captcha">${k.captcha}</td>
+            <td class="num s-error">${k.error}</td></tr>`).join('')
+        : '<tr><td colspan="6" class="u">Chưa có lượt chạy nào trong khoảng thời gian này.</td></tr>';
+    }
+
+    async function loadRuns() {
+      const q = new URLSearchParams({ limit: '50' });
+      if ($('chartCampaign').value) q.set('campaignId', $('chartCampaign').value);
+      const d = await api('/api/runs?' + q.toString());
+      $('tblRuns').tBodies[0].innerHTML = d.runs.length
+        ? d.runs.map(r => `<tr><td class="u">${esc(r.at)}</td><td>${esc(r.keyword || r.campaign_keyword || '')}${r.query && r.query !== (r.keyword || r.campaign_keyword) ? `<div class="u">🔍 truy vấn: ${esc(r.query)}</div>` : ''}</td>
+            <td class="s-${esc(r.status)}">${esc(r.status)}${r.impression ? ' · 👁 hiển thị' : ''}</td>
+            <td>${esc(deviceLabel(r))}</td><td class="num">${r.seconds ?? '-'}</td>
+            <td class="num">${r.position ?? '-'}</td><td class="u">${esc(r.ip || '')}</td></tr>`).join('')
+        : '<tr><td colspan="7" class="u">Chưa có lượt chạy nào.</td></tr>';
+    }
+
+    async function loadNotifs() {
+      const d = await api('/api/notifications?limit=40');
+      $('notifCount').textContent = d.unread ? `(${d.unread} chưa đọc)` : '';
+      $('notifs').innerHTML = d.items.length
+        ? d.items.map(n => `<div class="notif${n.read_at ? '' : ' unread'}"><b>${esc(n.title)}</b> <span class="at">${esc(n.at)}</span>${n.body ? `<div class="u">${esc(n.body)}</div>` : ''}</div>`).join('')
+        : '<div class="u">Chưa có thông báo.</div>';
+      const top = d.items[0];
+      $('annBox').hidden = !top;
+      if (top) {
+        $('annTitle').textContent = top.title;
+        $('annBody').textContent = top.body || '';
+        $('annAt').textContent = top.at || '';
+      }
+      nav({ unread: d.unread, pending: nav.last ? nav.last.pending : null });
+    }
+
+    let esConn = null;
+    function connectEvents() {
+      if (esConn || document.hidden) return;
+      const es = esConn = new EventSource('/api/events');
+      es.onmessage = e => {
+        try {
+          const d = JSON.parse(e.data);
+          live = d;
+          paintLive(d);
+        } catch {}
+      };
+      es.onerror = () => {
+        $('dotRun').className = 'dot off';
+        $('liveText').textContent = 'Đang kết nối lại luồng realtime…';
+      };
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { if (esConn) { esConn.close(); esConn = null; } }
+      else { connectEvents(); if (typeof refresh === 'function') refresh().catch(() => {}); }
+    });
+
+    function paintLive(d) {
+      if (d.type === 'error') return;
+      $('dotRun').className = 'dot ' + (d.running ? 'on' : 'off');
+      $('liveText').textContent = d.running
+        ? `Engine đang chạy · ${d.threads} luồng · ${d.tasks.length} chiến dịch đủ điều kiện${d.inActiveHours ? '' : ' (ngoài khung giờ chạy)'}`
+        : 'Engine đang tạm dừng — chiến dịch phải được admin duyệt và bật mới chạy.';
+      $('liveAt').textContent = `cập nhật ${new Date(d.at).toLocaleTimeString('vi-VN')}`;
+      if (d.badge) nav(d.badge);
+      if (d.wallet && d.wallet.balance !== balLast) { loadWallet().catch(() => {}); loadTxns().catch(() => {}); }
+      $('badgeBox').textContent = d.badge ? `chờ duyệt: ${d.badge.pending ?? '—'} · chưa đọc: ${d.badge.unread}` : '';
+      const tb = $('tblWorkers').tBodies[0];
+      tb.innerHTML = (d.workers || []).length
+        ? d.workers.map(w => `<tr><td>${w.slot}</td><td>${esc(w.keyword)}</td>
+            <td>${esc(w.step)}${w.captchaLeft ? ` <span class="s-captcha">(xác minh còn ${w.captchaLeft}s)</span>` : ''}</td>
+            <td class="num">${w.elapsed}s</td><td class="u">${esc(w.ip || '')}</td>
+            <td class="num">${w.res ? `${w.res.ramMB ?? '-'} MB · ${w.res.cpuPct ?? '-'}%` : '—'}</td></tr>`).join('')
+        : '<tr><td colspan="6" class="u">Không có luồng nào đang chạy.</td></tr>';
+      $('liveEvents').textContent = (d.events || []).join('\n');
+      paintProgress(d);
+    }
+
+    async function loadAccount() {
+      try {
+        const d = await api('/api/account/profile');
+        $('acUser').value = d.user.username || '';
+        $('acName').value = d.user.displayName || '';
+      } catch (e) { setMsg('acNameMsg', e.message, 'err'); }
+    }
+    async function saveAccountName() {
+      try {
+        await api('/api/account/profile', { method: 'POST', body: JSON.stringify({ displayName: $('acName').value.trim() }) });
+        setMsg('acNameMsg', 'Đã lưu tên hiển thị.', 'ok');
+        UI.ok('Đã lưu tên hiển thị.');
+      } catch (e) { setMsg('acNameMsg', e.message, 'err'); UI.fail(e.message); }
+    }
+    async function changeAccountPassword() {
+      const cur = $('acCur').value, nw = $('acNew').value, nw2 = $('acNew2').value;
+      if (!cur || !nw) { setMsg('acPassMsg', 'Nhập mật khẩu hiện tại và mật khẩu mới.', 'err'); return; }
+      if (nw.length < 8) { setMsg('acPassMsg', 'Mật khẩu mới cần tối thiểu 8 ký tự.', 'err'); return; }
+      if (nw !== nw2) { setMsg('acPassMsg', 'Mật khẩu nhập lại không khớp.', 'err'); return; }
+      $('btnAcPass').disabled = true;
+      try {
+        await api('/api/account/password', { method: 'POST', body: JSON.stringify({ current: cur, password: nw, passwordConfirm: nw2 }) });
+        $('acCur').value = $('acNew').value = $('acNew2').value = '';
+        setMsg('acPassMsg', 'Đã đổi mật khẩu. Các thiết bị khác phải đăng nhập lại.', 'ok');
+        UI.ok('Đã đổi mật khẩu.');
+      } catch (e) { setMsg('acPassMsg', e.message, 'err'); UI.fail(e.message); } finally { $('btnAcPass').disabled = false; }
+    }
+
+    (async function init() {
+      try {
+        initShell();
+        await loadMeta();
+        $('fType').onchange = typeHint;
+        $('btnCreate').onclick = create;
+        $('btnCopyFooter').onclick = copyFooterCode;
+        $('btnAcName').onclick = saveAccountName;
+        $('btnAcPass').onclick = changeAccountPassword;
+        $('btnSaveEdit').onclick = saveEdit;
+        $('btnCancelEdit').onclick = () => { $('editCard').hidden = true; editing = null; };
+        $('btnReload').onclick = () => refresh().catch(e => UI.fail(e.message));
+        $('chartCampaign').onchange = () => { loadChart(); loadKeywords(); loadRuns(); };
+        $('chartType').onchange = () => loadChart();
+        $('chartMonth').onchange = () => loadReport();
+        UI.$$('[data-zoom]').forEach(b => { b.onclick = () => setZoom(b.dataset.zoom); });
+        $('chFrom').onchange = $('chTo').onchange = () => { UI.$$('[data-zoom]').forEach(b => b.setAttribute('aria-pressed', 'false')); loadLine(); };
+        $('btnReadAll').onclick = async () => { await api('/api/notifications/read-all', { method: 'POST' }); await loadNotifs(); };
+        $('btnWalletReload').onclick = () => Promise.all([loadWallet(), loadTxns()]).catch(e => UI.fail(e.message));
+        for (const id of ['fId', 'fSearch', 'fDomain']) $(id).addEventListener('input', UI.debounce(renderCampaigns, 150));
+        $('btnFind').onclick = renderCampaigns;
+        $('txnTabs').querySelectorAll('button').forEach(b => {
+          b.onclick = () => {
+            txnKind = b.dataset.kind;
+            $('txnTabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+            loadTxns().catch(e => UI.fail(e.message));
+          };
+        });
+        document.addEventListener('click', e => { if (e.target.closest('.js-topup')) openTopup(); });
+        $('topupClose').onclick = () => { $('topupModal').hidden = true; };
+        $('topupModal').addEventListener('click', e => { if (e.target === $('topupModal')) $('topupModal').hidden = true; });
+        bindKeywordSplit('fKeyword', 'fUrl');
+        $('fQueryMode').onchange = queryHint;
+        bindKeywordSplit('eKeyword', 'eUrl');
+        await refresh();
+        connectEvents();
+        UI.sortTable('#tblCampaigns');
+        UI.bindCopyButtons();
+        setInterval(() => loadNotifs().catch(() => {}), 60000);
+      } catch (e) {
+        setMsg('createMsg', e.message, 'err');
+        UI.fail(e.message);
+      }
+    })();
+  </script>
+</main>
+</body>
+</html>

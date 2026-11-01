@@ -1,0 +1,242 @@
+========================================================================
+  GHI CHÚ KỸ THUẬT — HỆ THỐNG GIẢI CAPTCHA GOOGLE /sorry
+  App: Omni Google Search
+  Solver: CapSolver
+  Cập nhật: 2026-09-30
+========================================================================
+
+------------------------------------------------------------------------
+1. TỔNG QUAN
+------------------------------------------------------------------------
+
+App dùng CapSolver để tự động giải captcha reCAPTCHA Enterprise khi
+Google chặn truy vấn tìm kiếm và đẩy sang trang /sorry.
+
+Luồng: Google /sorry -> đọc sitekey + data-s -> gửi CapSolver API
+       -> nhận token -> chèn vào form -> submit -> qua captcha.
+
+
+------------------------------------------------------------------------
+2. CÁC FILE LIÊN QUAN
+------------------------------------------------------------------------
+
+FILE CHÍNH (bộ khung CapSolver):
+
+  [1] workflow/capsolver.mjs
+      - File MỚI
+      - Gọi CapSolver API: createTask + getTaskResult
+      - Task type: ReCaptchaV2EnterpriseTaskProxyLess
+      - Nhận: apiKey, sitekey, url, dataS, userAgent
+      - Trả về: token reCAPTCHA
+
+  [2] workflow/captcha.mjs
+      - File THAY THẾ (trước đó dùng 2Captcha)
+      - Hàm readSitekey() đọc sitekey + data-s từ trang /sorry
+        bằng 3 cách:
+          (a) selector .g-recaptcha, [data-sitekey]
+          (b) biến JS window.___grecaptcha_cfg
+          (c) regex trên HTML toàn trang
+      - Gọi CapSolver -> nhận token -> chèn vào form -> submit
+      - Chờ rời /sorry tối đa 30 giây
+
+  [3] workflow/google-search.mjs
+      - File SỬA
+      - Bước 'Google chặn (captcha /sorry)' gọi:
+          solveGoogleSorry(page, { apiKey: solver.apiKey, log })
+      - Nhận tham số `solver` từ worker
+      - Timeout các bước:
+          Mở google.com:                       20000 ms
+          Đồng ý cookie:                       10000 ms
+          Google chặn (captcha /sorry):        20000 ms
+          Trang chủ Google — nhập từ khóa:     30000 ms
+          Trang kết quả tìm kiếm:              20000 ms
+
+  [4] workflow/worker.mjs
+      - File SỬA
+      - Nhận `solver` từ campaign, truyền xuống googleSearch
+      - Dòng quan trọng:
+          solver,   // <- CapSolver hoặc solver khác
+
+  [5] campaign.mjs
+      - File SỬA
+      - Cấu hình: captchaMode = 'capsolver' | 'manual' | 'rotate'
+      - Lưu: solverApiKey (CapSolver API key)
+      - Truyền: { apiKey: solverApiKey, type: 'capsolver' }
+        xuống runVisit -> worker -> googleSearch
+      - Check khi start():
+          if (captchaMode === 'capsolver' && !solverApiKey)
+            throw new Error('Chưa nhập CapSolver API key.')
+
+FILE UI:
+
+  [6] public/campaign.html
+      - Dropdown "Khi gặp captcha":
+          manual    = Chờ tôi giải tay
+          capsolver = Tự động CapSolver (fallback: chờ tay)
+          rotate    = Đổi IP ngay
+      - Ô nhập: "CapSolver API key" (id=solverApiKey)
+
+  [7] data/campaign.json
+      - Lưu cấu hình thực tế
+      - Chứa solverApiKey đã lưu (masked khi trả về UI)
+
+FILE ĐIỀU KHIỂN TIMEOUT:
+
+  [8] workflow/runner.mjs
+      - maxIterations: 20
+      - maxSameStep: 4
+      - Ảnh hưởng trực tiếp đến bước nhận diện /sorry
+
+
+------------------------------------------------------------------------
+3. ĐIỂM CỐT LÕI KHI CẢI TIẾN
+------------------------------------------------------------------------
+
+3.1. Đổi task type CapSolver
+     File: workflow/capsolver.mjs
+     Hiện tại: type = 'ReCaptchaV2EnterpriseTaskProxyLess'
+     Nếu CapSolver đổi API hoặc có task type mới rẻ hơn -> sửa dòng này.
+
+3.2. Google đổi DOM trang /sorry
+     File: workflow/captcha.mjs
+     Hàm readSitekey() hiện thử 3 cách. Nếu Google đổi DOM:
+       - Thêm cách thứ 4, hoặc
+       - Sửa selector trong cách (a)
+
+3.3. API key CapSolver
+     Lưu tại: data/campaign.json (trường solverApiKey)
+     Nhập tại: public/campaign.html (id solverApiKey)
+     Truyền qua: campaign.mjs -> worker.mjs -> google-search.mjs
+                 -> captcha.mjs -> capsolver.mjs
+
+3.4. Thêm solver khác (Anti-Captcha, CapMonster...)
+     - Tạo file: workflow/<tên-solver>.mjs
+     - Sửa workflow/captcha.mjs để chọn solver theo captchaMode
+
+3.5. Bật/tắt CapSolver
+     BẬT: chọn "Tự động CapSolver" + nhập key trong /campaign
+     TẮT: chọn "Chờ tôi giải tay" — không cần xóa file
+
+3.6. Kiểm tra số dư CapSolver
+     Lệnh PowerShell:
+       Invoke-WebRequest -Uri "https://api.capsolver.com/getBalance"
+         -Method POST -ContentType "application/json"
+         -Body '{"clientKey":"KEY_CỦA_BẠN"}' -UseBasicParsing
+
+     Chi phí: ~$0.8-1.2 / 1000 task (~20-30đ/task)
+
+ 3.7. CHỐNG TỰ ĐIỀU HƯỚNG LẠI KHI ĐANG Ở TRANG CAPTCHA
+      (lỗi hay bị báo là "CHƯA GIẢI CAPTCHA MÀ TRANG ĐÃ RELOAD LẠI" — nặng nhất ở lượt DI ĐỘNG)
+
+      Quy tắc nay nằm trong workflow/google-search.mjs:
+        - Bước 'Mở google.com' chỉ chạy khi BIẾT CHẮC URL hiện tại không phải Google:
+              return !!u && !isGoogleHost(u) && !isConsent(u);
+          (đọc URL hụt lúc trang đang điều hướng KHÔNG phải căn cứ để mở lại google.com)
+        - currentUrl() nhớ URL đọc được gần nhất (lastUrl): page.url() trả rỗng/throw
+          đúng lúc trang đang chuyển thì dùng lại URL cũ, không trả null.
+        - backToGoogleHome(): MỌI chỗ quay lại google.com đều đi qua hàm này — đang ở
+          /sorry thì KHÔNG điều hướng (trả false để bước captcha xử lý).
+        - Chờ giải tay: chỉ kết luận "đã qua captcha" khi đọc được URL Google (không
+          còn /sorry) HAI LẦN LIÊN TIẾP (biến `clear`) — đọc hụt một nhịp không tính.
+        - captchaPassed = true sau khi qua captcha (CapSolver hoặc chờ tay): trang
+          Google đưa tới sau đó là trang của CHÍNH lượt này, không phải "trang cũ".
+
+      Vì sao cần: sau khi qua captcha, Google mã hoá truy vấn ngay trong URL kết quả
+      (q=EgSr4vRwGOm7_9UGIjBOMVV4zRzoxK82..., 60-100 ký tự base64url). Trước đây trang
+      này bị coi là "trang kết quả cũ" (vì q != truy vấn) nên engine quay lại
+      google.com liên tục: mất captcha vừa giải, tìm lại -> captcha lại, hết 20 vòng
+      lặp thì bỏ lượt (thấy thật trong data/runs.jsonl).
+      Nay: looksEncryptedQuery() nhận diện chuỗi mã hoá + xét CẢ danh sách tham số q
+      (searchParams.getAll('q')) nên quét luôn trang đó; chỉ tìm lại từ đầu khi trang
+      mã hoá KHÔNG có kết quả tự nhiên nào.
+
+      Test tương ứng: tests/engine.test.mjs mục 20h (URL mã hoá) và 20i (trang /sorry).
+
+
+------------------------------------------------------------------------
+4. FILE CŨ KHÔNG CÒN DÙNG (có thể xóa)
+------------------------------------------------------------------------
+
+  workflow/twocaptcha.mjs    -- đã thay bằng capsolver.mjs
+  sorry-debug.html           -- chỉ dùng để debug, xóa sau khi xong
+  last-run.txt               -- chỉ dùng để debug
+
+
+------------------------------------------------------------------------
+5. VẤN ĐỀ CÒN TỒN
+------------------------------------------------------------------------
+
+5.1. Tỷ lệ captcha cao (50-70% số lượt)
+     Nguyên nhân: Proxy Webshare bị Google đánh dấu.
+     Cách sửa: đổi sang proxy residential sạch hơn
+       - Smartproxy
+       - Oxylabs
+       - Bright Data
+
+5.2. URL đích không có ở trang 1 (notfound)
+     Cách sửa: tăng "Số trang Google tìm" trong /campaign
+       từ 5 lên 8-10.
+     Nếu site CHƯA LÊN HẠNG cho từ khóa đó (tên miền đích không
+       có trong "Tên miền đã thấy" của lượt chạy): đổi chiến dịch
+       sang "Kiểu truy vấn" = Từ khóa + tên miền (engine gõ
+       "từ khóa + tên miền đích" nên Google trả về đúng site).
+     Kiểm chứng: bảng "Lượt chạy gần đây" hiện dòng
+       "truy vấn gửi Google: ..." ngay dưới từ khóa — lượt notfound
+       vẫn ghi được truy vấn (runs.query), nên thấy ngay engine đã
+       gõ "từ khóa + tên miền" hay chưa.
+
+5.3. Chưa hỗ trợ solver dự phòng
+     Hiện tại: nếu CapSolver fail -> chuyển sang chờ tay.
+     Cải tiến: thêm 2Captcha / Anti-Captcha làm solver thứ 2,
+     chạy song song, lấy kết quả về trước.
+
+
+------------------------------------------------------------------------
+6. LỆNH DEBUG NHANH
+------------------------------------------------------------------------
+
+6.1. Xem log chi tiết lượt chạy cuối:
+     Get-Content "data\runs.jsonl" | Select-Object -Last 1
+
+6.2. Kiểm tra cấu hình đang lưu:
+     (Invoke-WebRequest -Uri "http://localhost:3300/api/campaign"
+       -UseBasicParsing).Content | ConvertFrom-Json |
+       Select-Object -ExpandProperty settings |
+       Select-Object captchaMode, solverApiKey
+
+6.3. Restart app Node:
+     taskkill /F /IM node.exe
+     cd "C:\CONG VIEC\CLOUD CODE\Omni"
+     npm start
+
+6.4. Test key CapSolver:
+     Invoke-WebRequest -Uri "https://api.capsolver.com/getBalance"
+       -Method POST -ContentType "application/json"
+       -Body '{"clientKey":"KEY_CỦA_BẠN"}' -UseBasicParsing
+
+
+------------------------------------------------------------------------
+7. LỊCH SỬ THAY ĐỔI
+------------------------------------------------------------------------
+
+2026-10-02:
+  - Sửa lỗi "chưa giải captcha mà trang đã reload lại" (nặng nhất ở lượt di động):
+    workflow/google-search.mjs không còn điều hướng lại google.com khi đang ở
+    trang /sorry, không kết luận "đã qua captcha" khi đọc URL hụt, và nhận đúng
+    trang kết quả có truy vấn bị Google mã hoá trong URL (q=EgSr...).
+    Chi tiết + test: xem mục 3.7 ở trên, tests/engine.test.mjs 20h / 20i.
+
+2026-09-30:
+  - Tạo workflow/capsolver.mjs (thay 2Captcha)
+  - Viết lại workflow/captcha.mjs dùng CapSolver
+  - Sửa workflow/google-search.mjs: nhận `solver`, timeout mới
+  - Sửa workflow/worker.mjs: truyền `solver`
+  - Sửa campaign.mjs: đổi '2captcha' -> 'capsolver'
+  - Sửa public/campaign.html: dropdown + label
+  - Sửa workflow/runner.mjs: maxIterations=20, maxSameStep=4
+  - Test: 1 lượt OK, 1 lượt notfound, 1 lượt unknown state (đã sửa)
+
+
+========================================================================
+  HẾT
+========================================================================

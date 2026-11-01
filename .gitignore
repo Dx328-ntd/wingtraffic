@@ -1,0 +1,29 @@
+# ---- Omni Google Search: file KHÔNG commit lên kho mã ----
+
+# Bí mật & cấu hình riêng của máy: JWT_SECRET, mật khẩu proxy, API key...
+.env
+.env.*
+!.env.example
+
+# Dữ liệu chạy & CSDL (data/campaign.json cũng chứa bí mật: solverApiKey, mật khẩu proxy)
+data/
+last-run.txt
+bridges.json
+config.json
+
+# Nhật ký chạy & file gỡ lỗi (có thể chứa IP, cookie, nội dung trang)
+*.log
+sorry-debug.html
+
+# Gói xuất / sao lưu nén
+*.zip
+export/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Hệ điều hành & trình soạn thảo
+Thumbs.db
+Desktop.ini
+.vscode/

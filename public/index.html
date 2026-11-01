@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WingTraffic Google Search</title>
+<meta name="robots" content="noindex" />
+<link rel="stylesheet" href="/ui.css" />
+<style>
+  .wrap-fields { display: grid; gap: 14px; }
+  .block + .block { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-2); }
+  .block h2 { font-size: 14px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .block h2 .n {
+    width: 22px; height: 22px; border-radius: 999px; background: var(--primary-bg); color: var(--primary);
+    font-size: 12px; font-weight: 700; display: grid; place-items: center; flex: none;
+  }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .sticky-log { position: sticky; top: calc(var(--topbar-h) + 12px); }
+  #log { min-height: 240px; }
+  #landed { font-size: 13px; margin-bottom: 12px; }
+  #visit { font-size: 13px; margin-bottom: 12px; }
+  #visit ul { padding-left: 20px; margin-top: 4px; }
+  #visit li { margin-bottom: 4px; word-break: break-all; }
+  ol#results { padding-left: 20px; }
+  ol#results li { margin-bottom: 8px; }
+  ol#results li.hit { background: var(--ok-bg); border-radius: var(--radius-sm); padding: 4px 6px; margin-left: -6px; }
+  ol#results a { font-weight: 500; }
+  .tag { font-size: 11px; font-weight: 700; color: var(--ok); margin-left: 6px; }
+  .pg { color: var(--muted); font-size: 11px; margin-right: 4px; }
+  .run-progress { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .pbar.indet i { width: 35% !important; animation: slide 1.3s ease-in-out infinite; }
+  @keyframes slide { 0%, 100% { margin-left: 0; } 50% { margin-left: 63%; } }
+  @media (prefers-reduced-motion: reduce) { .pbar.indet i { animation: none; } }
+  @media (max-width: 1000px) { .sticky-log { position: static; } }
+</style>
+</head>
+<body>
+<main class="main">
+  <div class="split">
+    <div class="card">
+      <div class="block">
+        <h2><span class="n">1</span> Từ khóa &amp; URL cần vào</h2>
+        <div class="wrap-fields">
+          <div class="field">
+            <label for="keyword">Từ khóa tìm trên Google</label>
+            <input type="text" id="keyword" value="Omnilogin" placeholder="Nhập từ khóa..." />
+          </div>
+          <div class="fields">
+            <div class="field grow">
+              <label for="targetUrl">URL cần vào (để trống = chỉ tìm kiếm)</label>
+              <input type="text" id="targetUrl" value="https://www.omnilogin.net" placeholder="vd: omnilogin.net hoặc https://docs.omnilogin.net/en" />
+            </div>
+            <div class="field" style="max-width:170px">
+              <label for="maxPages">Số trang Google tìm tối đa</label>
+              <input type="number" id="maxPages" value="5" min="1" max="10" />
+            </div>
+          </div>
+          <details class="note">
+            <summary>Cách khớp URL và cách đọc kết quả</summary>
+            <div class="note-body">
+              <div>Chỉ ghi domain → khớp mọi trang của domain đó (kể cả subdomain). Có thêm đường dẫn → chỉ khớp URL bắt đầu bằng đường dẫn đó. Để trống = chỉ tìm kiếm, không bấm vào đâu.</div>
+              <div>Kết quả ở khối <b>Kết quả</b> bên dưới: dòng "Đã vào trang" là kết quả đã bấm được; danh sách kết quả tự nhiên đọc được của Google có đánh dấu <b>ĐÃ BẤM</b>. Từ khóa được lưu lại vào <code>data/config.json</code> mỗi lần chạy.</div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2><span class="n">2</span> Profile OmniLogin</h2>
+        <div class="fields">
+          <div class="field grow">
+            <label for="profileId">Chọn profile chạy</label>
+            <select id="profileId"><option value="">Đang tải danh sách profile...</option></select>
+          </div>
+          <div class="field" style="max-width:120px; display:flex; align-items:flex-end">
+            <button class="btn wide" id="reload" type="button">↻ Tải lại</button>
+          </div>
+        </div>
+        <div class="hint" id="profileHint">Profile mở ở chế độ có giao diện (không headless).</div>
+      </div>
+
+      <div class="block">
+        <h2><span class="n">3</span> Hành vi sau khi vào site</h2>
+        <div class="fields">
+          <div class="field">
+            <label for="dwellMin">Ở lại trang đích (giây)</label>
+            <div class="range">
+              <input type="number" id="dwellMin" value="60" min="0" max="3600" />
+              <span>–</span>
+              <input type="number" id="dwellMax" value="120" min="0" max="3600" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="subpages">Số trang con</label>
+            <select id="subpages">
+              <option value="0">0 — không vào</option>
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="subDwellMin">Ở lại mỗi trang con (giây)</label>
+            <div class="range">
+              <input type="number" id="subDwellMin" value="20" min="0" max="3600" />
+              <span>–</span>
+              <input type="number" id="subDwellMax" value="45" min="0" max="3600" />
+            </div>
+          </div>
+        </div>
+        <div class="presets">
+          <span class="meta">Mẫu nhanh:</span>
+          <button class="btn sm" type="button" onclick="applyPreset(60,120,0)">Lướt nhanh</button>
+          <button class="btn sm" type="button" onclick="applyPreset(240,480,2)">Đọc kỹ 4–8 phút</button>
+          <button class="btn sm" type="button" onclick="applyPreset(600,900,4)">Ở lâu 10–15 phút</button>
+          <button class="btn sm" type="button" onclick="applyPreset(1200,1800,4)">Tối đa 30 phút</button>
+        </div>
+        <div class="hint" id="behaviorHint"></div>
+      </div>
+
+      <div class="block">
+        <label class="check"><input type="checkbox" id="closeAfterRun" /> Đóng profile sau khi chạy xong</label>
+        <div class="row-actions">
+          <button class="btn primary big" id="run" type="button">▶ Thực thi quy trình</button>
+          <span id="status" class="msg" role="status"></span>
+        </div>
+        <div class="run-progress" id="runProgress" hidden>
+          <div class="pbar indet" style="flex:1"><i></i></div>
+          <span class="meta" id="runTimer">0:00</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card sticky-log">
+        <div class="card-head">
+          <h2>Nhật ký chạy</h2>
+          <div class="card-actions">
+            <label class="check" style="min-height:0"><input type="checkbox" id="autoScroll" checked /> Tự cuộn</label>
+            <button class="btn sm" type="button" data-copy="#log" data-copy-label="nhật ký">Copy</button>
+          </div>
+        </div>
+        <pre id="log" class="tall">Chưa chạy.</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="resultCard" hidden>
+    <div class="card-head"><h2 id="resultTitle">Kết quả</h2></div>
+    <div id="landed" hidden></div>
+    <div id="visit" hidden></div>
+    <ol id="results"></ol>
+  </div>
+</main>
+
+<script src="/ui.js"></script>
+<script>
+  var UI = window.WingTrafficUI;
+  var $ = UI.$;
+  var savedProfileId = null;
+  var runStartedAt = 0;
+
+  function escapeHtml(s) { return UI.esc(s); }
+  function setStatus(text, cls) { $('status').textContent = text || ''; $('status').className = 'msg ' + (cls || ''); }
+
+  function estimate() {
+    var dwellMid = (Number($('dwellMin').value) + Number($('dwellMax').value)) / 2 || 0;
+    var subs = Number($('subpages').value) || 0;
+    var subEach = subs ? (Number($('subDwellMin').value) + Number($('subDwellMax').value)) / 2 : 0;
+    var sec = Math.round(dwellMid + (subEach * subs) + 30);
+    $('behaviorHint').innerHTML = sec <= 30
+      ? 'Chưa đặt thời gian ở lại — chỉ tìm kiếm rồi đóng profile.'
+      : 'Một lượt ≈ <b>' + UI.dur(sec) + '</b> (ở lại ≈' + Math.round(dwellMid) + ' giây' +
+        (subs ? ' + ' + subs + ' trang con × ≈' + Math.round(subEach) + ' giây' : '') +
+        ' + ≈30 giây tìm kiếm &amp; mở profile). Đặt thời gian trang đích 0–0 để bỏ qua bước ở lại.';
+  }
+  function applyPreset(dwellMin, dwellMax, subs) {
+    $('dwellMin').value = dwellMin;
+    $('dwellMax').value = dwellMax;
+    $('subpages').value = String(subs);
+    if (subs) { $('subDwellMin').value = Math.round(dwellMax / 8); $('subDwellMax').value = Math.round(dwellMax / 4); }
+    estimate();
+  }
+  ['dwellMin', 'dwellMax', 'subDwellMin', 'subDwellMax', 'subpages'].forEach(function (id) {
+    $(id).addEventListener('input', estimate);
+    $(id).addEventListener('change', estimate);
+  });
+
+  async function loadConfig() {
+    try {
+      var c = await UI.api('/api/config');
+      if (c.keyword) $('keyword').value = c.keyword;
+      if (c.targetUrl !== undefined) $('targetUrl').value = c.targetUrl;
+      if (c.maxPages) $('maxPages').value = c.maxPages;
+      $('closeAfterRun').checked = !!c.closeAfterRun;
+      ['dwellMin', 'dwellMax', 'subDwellMin', 'subDwellMax', 'subpages'].forEach(function (k) {
+        if (c[k] !== undefined && c[k] !== null) $(k).value = c[k];
+      });
+      savedProfileId = c.profileId;
+      estimate();
+    } catch (e) {  }
+  }
+
+  async function loadProfiles() {
+    var sel = $('profileId');
+    sel.innerHTML = '<option value="">Đang tải...</option>';
+    try {
+      var data = await UI.api('/api/profiles');
+      var list = data.profiles || [];
+      if (!list.length) {
+        sel.innerHTML = '<option value="">(Chưa có profile nào trong OmniLogin)</option>';
+        $('profileHint').textContent = 'Hãy tạo ít nhất một profile trong OmniLogin desktop rồi bấm "Tải lại".';
+        return;
+      }
+      sel.innerHTML = '<option value="">-- Chọn profile --</option>' + list.map(function (p) {
+        var extra = [p.group, (p.tags || []).join(', ')].filter(Boolean).join(' · ');
+        return '<option value="' + p.id + '">#' + p.id + ' — ' + escapeHtml(p.name) + (extra ? ' (' + escapeHtml(extra) + ')' : '') + '</option>';
+      }).join('');
+      if (savedProfileId) sel.value = String(savedProfileId);
+      $('profileHint').textContent = list.length + ' profile. Profile mở ở chế độ có giao diện (không headless).';
+    } catch (e) {
+      sel.innerHTML = '<option value="">(Không tải được danh sách)</option>';
+      $('profileHint').textContent = 'Lỗi: ' + e.message;
+    }
+  }
+
+  async function run() {
+    var profileId = $('profileId').value;
+    if (!profileId) { setStatus('Chọn một profile OmniLogin trước khi chạy.', 'err'); $('profileId').focus(); return; }
+    setStatus('');
+    $('resultCard').hidden = true;
+    $('log').textContent = 'Đang chuẩn bị...';
+    $('runProgress').hidden = false;
+    runStartedAt = Date.now();
+    timer();
+    try {
+      var r = await UI.withButton($('run'), function () {
+        return UI.api('/api/run', {
+          keyword: $('keyword').value.trim() || 'Omnilogin',
+          targetUrl: $('targetUrl').value.trim(),
+          maxPages: Number($('maxPages').value) || 5,
+          profileId: profileId,
+          closeAfterRun: $('closeAfterRun').checked,
+          dwellMin: $('dwellMin').value,
+          dwellMax: $('dwellMax').value,
+          subpages: $('subpages').value,
+          subDwellMin: $('subDwellMin').value,
+          subDwellMax: $('subDwellMax').value,
+        });
+      });
+      savedProfileId = profileId;
+      poll(r.jobId);
+    } catch (e) {
+      $('runProgress').hidden = true;
+      setStatus(e.message, 'err');
+      UI.fail(e.message);
+    }
+  }
+  function timer() {
+    if ($('runProgress').hidden) return;
+    $('runTimer').textContent = UI.clock((Date.now() - runStartedAt) / 1000);
+    setTimeout(timer, 1000);
+  }
+
+  async function poll(jobId) {
+    try {
+      var job = await UI.api('/api/job/' + jobId);
+      var logs = job.logs || [];
+      $('log').textContent = logs.join('\n');
+      if ($('autoScroll').checked) $('log').scrollTop = $('log').scrollHeight;
+      if (job.status === 'running') {
+        if (logs.length) setStatus('Đang chạy · ' + logs[logs.length - 1]);
+        setTimeout(function () { poll(jobId); }, 800);
+        return;
+      }
+      $('runProgress').hidden = true;
+      if (job.status === 'done') {
+        setStatus('Hoàn tất sau ' + UI.dur((Date.now() - runStartedAt) / 1000) + '.', 'ok');
+        UI.ok('Đã chạy xong một lượt.');
+        showResults(job.result);
+      } else {
+        setStatus('Lỗi: ' + job.error, 'err');
+        UI.fail('Lượt chạy lỗi: ' + job.error);
+      }
+    } catch (e) {
+      $('runProgress').hidden = true;
+      setStatus(e.message, 'err');
+      UI.fail(e.message);
+    }
+  }
+
+  function showResults(r) {
+    if (!r) return;
+    var list = r.results || [];
+    $('resultTitle').textContent = 'Kết quả cho "' + r.keyword + '" (' + list.length + ' kết quả đọc được)';
+    if (r.landed) {
+      $('landed').innerHTML = '<span class="badge on">✔ Đã vào trang</span> Kết quả trang ' + r.matched.page + ', vị trí #' + r.matched.position + ': ' +
+        '<a href="' + escapeHtml(r.landed.url) + '" target="_blank" rel="noopener">' + escapeHtml(r.landed.title || r.landed.url) + '</a>';
+    } else {
+      $('landed').innerHTML = '<span class="badge warn">⚠ Không bấm được URL</span> Không thấy URL cần vào trong ' + list.length +
+        ' kết quả đọc được — có thể gặp captcha, Google trả trang kết quả khác, hoặc URL đã đổi.';
+    }
+    $('landed').hidden = false;
+    if (r.visit) {
+      $('visit').innerHTML = '<div><span class="badge info">⏱ ' + UI.dur(r.visit.totalSeconds) + '</span> ở lại trên site, xem ' + r.visit.pages.length + ' trang</div><ul>' +
+        r.visit.pages.map(function (p) {
+          return '<li>' + escapeHtml(p.label) + ': ' + p.seconds + ' giây, cuộn ' + p.scrollDepth + '% — <span class="u">' + escapeHtml(p.url) + '</span></li>';
+        }).join('') + '</ul>';
+      $('visit').hidden = false;
+    } else {
+      $('visit').hidden = true;
+    }
+    $('results').innerHTML = list.map(function (x) {
+      return '<li' + (x.matched ? ' class="hit"' : '') + '><span class="pg">[Tr.' + x.page + ']</span><a href="' + escapeHtml(x.href) + '" target="_blank" rel="noopener">' +
+        escapeHtml(x.title) + '</a>' + (x.matched ? '<span class="tag">ĐÃ BẤM</span>' : '') + '<div class="u">' + escapeHtml(x.href) + '</div></li>';
+    }).join('') || '<li>Không đọc được kết quả tự nhiên.</li>';
+    $('resultCard').hidden = false;
+    $('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  $('run').addEventListener('click', run);
+  $('reload').addEventListener('click', loadProfiles);
+  UI.bindCopyButtons();
+  estimate();
+  UI.mount({
+    shell: true,
+    active: '/test',
+    title: 'Chạy thử một lượt',
+    sub: 'Chạy ngay một lượt trên profile OmniLogin đang chọn để kiểm tra từ khóa, URL cần vào và thời gian ở lại. Muốn chạy hàng loạt nhiều luồng thì dùng <a href="/campaign">Cấu hình chạy</a>.',
+    actions: '<a class="btn" href="/campaign">⚙ Cấu hình chạy</a><a class="btn" href="/my">📋 Chiến dịch của tôi</a>'
+  }).then(loadConfig).then(loadProfiles);
+</script>
+</body>
+</html>

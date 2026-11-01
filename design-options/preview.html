@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WingTraffic — xem trước giao diện</title>
+<link rel="stylesheet" href="base.css">
+<script>
+  var O = Math.min(5, Math.max(1, parseInt(new URLSearchParams(location.search).get('o'), 10) || 1));
+  document.write('<link rel="stylesheet" href="opt-' + O + '.css">');
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></symbol>
+  <symbol id="i-camp" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l7 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M18 9a4 4 0 0 1 0 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="14" r="1"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+</svg>
+
+<div class="app">
+  <aside class="nav" aria-label="Menu chính">
+    <a class="brand" href="#"><img src="../public/logo-icon.png" alt=""><span><b>Wing<span>Traffic</span></b><small>Chiến dịch traffic</small></span></a>
+    <nav class="menu">
+      <a href="#" class="on"><svg class="i"><use href="#i-chart"/></svg><span>Thống kê</span><em class="nav-label" style="font-style:normal">Thống kê</em></a>
+      <a href="#"><svg class="i"><use href="#i-camp"/></svg><span>Chiến dịch</span><em class="nav-label" style="font-style:normal">Chiến dịch</em></a>
+      <a href="#"><svg class="i"><use href="#i-plus"/></svg><span>Tạo chiến dịch</span><em class="nav-label" style="font-style:normal">Tạo mới</em></a>
+      <a href="#"><svg class="i"><use href="#i-wallet"/></svg><span>Ngân sách</span><em class="nav-label" style="font-style:normal">Ngân sách</em></a>
+      <a href="#"><svg class="i"><use href="#i-tag"/></svg><span>Bảng giá</span><em class="nav-label" style="font-style:normal">Bảng giá</em></a>
+      <a href="#"><svg class="i"><use href="#i-bell"/></svg><span>Thông báo</span><em class="nav-label" style="font-style:normal">Thông báo</em><b class="nb">3</b></a>
+      <a href="#"><svg class="i"><use href="#i-user"/></svg><span>Tài khoản</span><em class="nav-label" style="font-style:normal">Tài khoản</em></a>
+    </nav>
+    <div class="nav-foot"><div class="avatar">K</div><div><b>khachhang</b><small>Khách hàng</small></div></div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <h1 class="page-title">Thống kê<span class="page-sub">Tổng quan chiến dịch trong 14 ngày gần nhất</span></h1>
+      <span class="chip"><svg class="i"><use href="#i-wallet"/></svg>1.250.000 ₫</span>
+      <button class="icon-btn" type="button" aria-label="Thông báo"><svg class="i"><use href="#i-bell"/></svg><span class="dot"></span></button>
+      <a class="cta" href="#"><svg class="i"><use href="#i-plus"/></svg>Tạo chiến dịch</a>
+    </header>
+
+    <main class="content">
+      <section class="kpis" aria-label="Chỉ số chính">
+        <div class="kpi"><div class="lab"><svg class="i"><use href="#i-eye"/></svg>Lượt hôm nay</div><div class="num">1.284</div><div class="delta">▲ 12,4% so với hôm qua</div><svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline data-spark="3,6,4,9,7,12,10,14,13,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="kpi"><div class="lab"><svg class="i"><use href="#i-target"/></svg>Tỉ lệ thành công</div><div class="num">96,2<small>%</small></div><div class="delta">▲ 1,1 điểm</div><svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline data-spark="9,10,9,11,12,11,13,13,14,15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="kpi"><div class="lab"><svg class="i"><use href="#i-zap"/></svg>Đang chạy</div><div class="num">5<small>/ 8 chiến dịch</small></div><div class="delta down">▼ 1 chiến dịch tạm dừng</div><svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline data-spark="6,6,7,7,8,8,7,6,6,5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="kpi"><div class="lab"><svg class="i"><use href="#i-wallet"/></svg>Đã chi tháng này</div><div class="num">3.480.000<small>₫</small></div><div class="delta">Còn đủ chạy ~9 ngày</div><svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline data-spark="2,4,5,7,9,10,12,14,16,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </section>
+
+      <section class="grid2">
+        <article class="card chart"><h2>Lượt truy cập theo ngày<small>14 ngày</small></h2>
+          <svg id="chart" viewBox="0 0 640 250" role="img" aria-label="Biểu đồ lượt truy cập 14 ngày"></svg>
+          <div class="legend"><span><i style="background:var(--c1)"></i>Tổng lượt</span><span><i style="background:var(--c2)"></i>Thành công</span></div>
+        </article>
+        <article class="card notes"><h2>Thông báo<small>3 mới</small></h2>
+          <ul>
+            <li class="ok"><svg class="i"><use href="#i-ok"/></svg><div><b>Chiến dịch #12 đã được duyệt</b><span>"kèo nhà cái" bắt đầu chạy lúc 09:00</span></div></li>
+            <li class="warn"><svg class="i"><use href="#i-alert"/></svg><div><b>Website chưa cài mã footer</b><span>keonhacai247.in — dán mã 1 dòng vào footer</span></div></li>
+            <li class="info"><svg class="i"><use href="#i-info"/></svg><div><b>Số dư còn ít</b><span>Nạp thêm để chiến dịch không bị dừng</span></div></li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="card"><h2>Chiến dịch của tôi<small>5 chiến dịch</small></h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Từ khóa / URL</th><th>Trạng thái</th><th>Tiến độ hôm nay</th><th>Thứ hạng</th><th>Mã footer</th></tr></thead>
+          <tbody>
+            <tr><td><span class="kw">kèo nhà cái</span><span class="url">keonhacai247.in</span></td><td><span class="badge b-ok">Đang chạy</span></td><td><div class="bar"><i style="width:72%"></i></div><div class="prog">72 / 100 lượt</div></td><td><b>#3</b> <span class="url">trang 1</span></td><td><span class="badge b-ok">Đã cài</span></td></tr>
+            <tr><td><span class="kw">soi kèo hôm nay</span><span class="url">k7d.io</span></td><td><span class="badge b-ok">Đang chạy</span></td><td><div class="bar"><i style="width:45%"></i></div><div class="prog">45 / 100 lượt</div></td><td><b>#8</b> <span class="url">trang 1</span></td><td><span class="badge b-warn">Chưa cài</span></td></tr>
+            <tr><td><span class="kw">tỷ lệ kèo bóng đá</span><span class="url">tylenhacai247.com</span></td><td><span class="badge b-warn">Chờ duyệt</span></td><td><div class="bar"><i style="width:0%"></i></div><div class="prog">0 / 60 lượt</div></td><td><span class="url">—</span></td><td><span class="badge b-mute">Chưa kiểm tra</span></td></tr>
+            <tr><td><span class="kw">nổ hũ uy tín</span><span class="url">go88.example</span></td><td><span class="badge b-mute">Tạm dừng</span></td><td><div class="bar"><i style="width:100%"></i></div><div class="prog">120 / 120 lượt</div></td><td><b>#14</b> <span class="url">trang 2</span></td><td><span class="badge b-ok">Đã cài</span></td></tr>
+            <tr><td><span class="kw">xổ số miền bắc</span><span class="url">xs.example</span></td><td><span class="badge b-err">Bị từ chối</span></td><td><div class="bar"><i style="width:0%"></i></div><div class="prog">0 / 50 lượt</div></td><td><span class="url">—</span></td><td><span class="badge b-warn">Chưa cài</span></td></tr>
+          </tbody></table></div>
+      </section>
+
+      <section class="card"><h2>Tạo chiến dịch mới</h2>
+        <div class="form">
+          <div><label>Loại chiến dịch</label><select class="input"><option>Search Traffic</option></select></div>
+          <div><label>Từ khóa</label><input class="input" value="kèo nhà cái"></div>
+          <div><label>URL đích</label><input class="input" value="https://keonhacai247.in/"></div>
+          <div><label>Số lượt mỗi kỳ</label><input class="input" value="10"></div>
+          <div><label>Đơn vị</label><select class="input"><option>lượt / giờ</option></select></div>
+          <div><label>Kiểu truy vấn gõ lên Google</label><select class="input"><option>Từ khóa + tên miền</option></select></div>
+          <div class="full"><label>Mã footer cần dán vào website</label><div style="display:flex;gap:10px;flex-wrap:wrap"><input class="input code" style="flex:1;min-width:240px" readonly value='<script async src="https://wingtraffic.tech/wt-badge.js"></script>'><button class="btn-line" type="button"><svg class="i"><use href="#i-copy"/></svg>Sao chép mã</button></div><div class="hint">Chỉ 1 dòng, dùng chung cho mọi website. Dán vào footer rồi gửi duyệt.</div></div>
+          <div class="full form-actions"><a class="cta" href="#">Gửi duyệt</a><button class="btn-line" type="button">Xem trước giá</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('[data-spark]').forEach(function (p) {
+    var v = p.getAttribute('data-spark').split(',').map(Number), mx = Math.max.apply(null, v), mn = Math.min.apply(null, v);
+    p.setAttribute('points', v.map(function (y, i) { return (i * 120 / (v.length - 1)).toFixed(1) + ',' + (30 - (y - mn) / (mx - mn || 1) * 26).toFixed(1); }).join(' '));
+  });
+  (function () {
+    var tot = [820, 910, 880, 1010, 960, 1100, 1180, 1050, 1120, 1240, 1190, 1300, 1260, 1284], ok = tot.map(function (t, i) { return Math.round(t * (0.93 + (i % 4) * 0.01)); });
+    var W = 640, H = 250, L = 38, R = 10, T = 12, B = 28, mx = 1500;
+    var x = function (i) { return L + i * (W - L - R) / 13; }, y = function (v) { return T + (1 - v / mx) * (H - T - B); };
+    var line = function (a) { return a.map(function (v, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' '); };
+    var g = '';
+    [0, 500, 1000, 1500].forEach(function (v) { g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (L - 8) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + '</text>'; });
+    var xs = ''; [0, 3, 6, 9, 13].forEach(function (i) { xs += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="' + (i === 13 ? 'end' : i === 0 ? 'start' : 'middle') + '">' + (15 + i) + '/10</text>'; });
+    document.getElementById('chart').innerHTML = '<g class="grid">' + g + '</g>' + xs +
+      '<path class="ar1" d="' + line(tot) + ' L' + x(13) + ' ' + y(0) + ' L' + x(0) + ' ' + y(0) + 'Z"/><path class="ln1" d="' + line(tot) + '"/><path class="ln2" d="' + line(ok) + '"/>';
+  })();
+</script>
+</body>
+</html>

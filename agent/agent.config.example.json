@@ -1,0 +1,10 @@
+{
+  "server": "https://wingtraffic.tech",
+  "key": "wt_DAN_KHOA_LAY_O_TRANG_QUAN_TRI_MAY_PHU_VAO_DAY",
+  "threads": 3,
+  "proxy": {
+    "mode": "omni",
+    "profiles": ["ten-profile-1", "ten-profile-2", "ten-profile-3"],
+    "rotateSec": 305
+  }
+}
