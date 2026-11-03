@@ -59,7 +59,7 @@
       : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
     var res = await fetch(path, init);
     var data = await res.json().catch(function () { return {}; });
-    if (res.status === 401 && opts.noRedirect !== true) {
+    if (res.status === 401 && opts.noRedirect !== true && location.pathname !== '/login') {
       location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search));
       throw new Error('Phiên đăng nhập đã hết hạn.');
     }

@@ -8,6 +8,7 @@ import { ensureOmniLogin, omniApiUp, detectRunningExe } from './omnilogin-launch
 import { sendTelegram, dailyReport, esc } from './telegram.mjs';
 import { ResourceMonitor } from './monitor.mjs';
 import { sessionParams, paceInfo, MAX_DWELL_SEC, MAX_SUBPAGES, MAX_THREADS } from './campaign-pace.mjs';
+import { stamp } from './time.mjs';
 import { isValidQueryMode } from './campaign-types.mjs';
 import { store } from './campaign-store.mjs';
 import { chargeableRun, visitCost } from './wallet.mjs';
@@ -479,7 +480,7 @@ export class Campaign {
   }
 
   event(msg) {
-    const line = `[${new Date().toLocaleTimeString('vi-VN')}] ${msg}`;
+    const line = `[${stamp()}] ${msg}`;
     this.events.unshift(line);
     this.events.length = Math.min(this.events.length, 100);
     console.log(`[campaign] ${msg}`);
@@ -745,7 +746,7 @@ export class Campaign {
     this.workers.set(slot, w);
     this.lastStart[task.id] = Date.now();
     const log = msg => {
-      w.logs.push(`[${new Date().toLocaleTimeString('vi-VN')}] ${msg}`);
+      w.logs.push(`[${stamp()}] ${msg}`);
       if (w.logs.length > WORKER_LOG_LINES) w.logs.shift();
       if (/^IP: /.test(msg)) w.ip = msg.slice(4);
     };

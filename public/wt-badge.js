@@ -97,6 +97,11 @@
     if (prev) { if (prev.code) showDone(prev.code); else run(prev); }
   }
 
-  if (me.parentNode && me.parentNode !== document.head || document.body) mount();
-  else document.addEventListener('DOMContentLoaded', mount);
+  // Ch?n ngay n?u th? <script> n?m trong body; n?u n?m trong <head> (ho?c ch?a c? body)
+  // th? ch? DOMContentLoaded. Tr??c ??y `a && b || document.body` lu?n ??ng n?n nh?nh
+  // ch? DOMContentLoaded kh?ng bao gi? ch?y, v? mount() c? th? g?p document.body = null.
+  var inHead = !me.parentNode || me.parentNode === document.head || me.parentNode === document.documentElement;
+  if (!inHead && document.body) mount();
+  else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
+  else mount();
 })();

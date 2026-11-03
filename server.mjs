@@ -11,6 +11,7 @@ import { RemoteHub } from './remote.mjs';
 import { packageManifest } from './package-hash.mjs';
 import { validateRegistration, rateLimiter, registrationOpen, normalizeIp } from './auth/register.mjs';
 import { gateGuard, clientIp, isExternalRequest } from './gate.mjs';
+import { stamp } from './time.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3300;
@@ -159,7 +160,7 @@ async function connectProfile(profileId, log) {
 
 async function runJob(job, { profileId, keyword, targetUrl, maxPages, closeAfterRun, dwellMin, dwellMax, subpages, subDwellMin, subDwellMax }) {
   const log = msg => {
-    const line = `[${new Date().toLocaleTimeString('vi-VN')}] ${msg}`;
+    const line = `[${stamp()}] ${msg}`;
     job.logs.push(line);
     console.log(`[job ${job.id}] ${msg}`);
   };
@@ -359,6 +360,18 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "font-src 'self'",
+    "connect-src 'self' https://cloudflareinsights.com",
+    "form-action 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+  ].join('; '));
   if (String(req.headers['x-forwarded-proto'] || '').includes('https') || /"scheme":"https"/.test(String(req.headers['cf-visitor'] || ''))) {
     res.setHeader('Strict-Transport-Security', 'max-age=15552000');
   }
@@ -636,7 +649,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && !url.pathname.startsWith('/api/') && String(req.headers.accept || '').includes('text/html')) {
       return send(res, 404, notFoundPage(user), 'text/html; charset=utf-8');
     }
-    send(res, 404, { error: 'Not found' });
+    send(res, 404, { error: 'Không có đường dẫn này.' });
   } catch (err) {
     const msg = err?.message || String(err);
     const status = Number(err?.status) || 500;

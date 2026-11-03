@@ -27,3 +27,6 @@ npm-debug.log*
 Thumbs.db
 Desktop.ini
 .vscode/
+
+# Ban sao ma nguon ban be gui lai (co .env, data rieng cua ho)
+ban be gui lai/

@@ -1106,7 +1106,7 @@ body.my .crumbs { display: none; }
       if (d.type === 'error') return;
       $('dotRun').className = 'dot ' + (d.running ? 'on' : 'off');
       $('liveText').textContent = d.running
-        ? `Engine đang chạy · ${d.threads} luồng · ${d.tasks.length} chiến dịch đủ điều kiện${d.inActiveHours ? '' : ' (ngoài khung giờ chạy)'}`
+        ? `Engine đang chạy${d.threads ? ' · ' + d.threads + ' luồng' : ''} · ${d.tasks.length} chiến dịch đủ điều kiện${d.inActiveHours ? '' : ' (ngoài khung giờ chạy)'}`
         : 'Engine đang tạm dừng — chiến dịch phải được admin duyệt và bật mới chạy.';
       $('liveAt').textContent = `cập nhật ${new Date(d.at).toLocaleTimeString('vi-VN')}`;
       if (d.badge) nav(d.badge);

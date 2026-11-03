@@ -8,6 +8,7 @@ import { ProxyPool, omniNames } from '../proxy-pool.mjs';
 import { packageManifest } from '../package-hash.mjs';
 import { ensureOmniLogin, omniApiUp } from '../omnilogin-launcher.mjs';
 import { ResourceMonitor } from '../monitor.mjs';
+import { stamp } from '../time.mjs';
 
 export const AGENT_VERSION = '1.0';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -17,7 +18,6 @@ const MEM_SETTLE_MS = 90000;
 const OMNI_API_TIMEOUT = Math.max(10000, Number(process.env.OMNI_API_TIMEOUT) || 120000);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const today = () => new Date().toLocaleDateString('sv-SE');
-const stamp = () => new Date().toLocaleTimeString('vi-VN');
 const say = m => console.log(`[${stamp()}] ${m}`);
 const clampInt = (v, min, max, def) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : def; };
 

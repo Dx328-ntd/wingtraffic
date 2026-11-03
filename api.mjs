@@ -430,7 +430,9 @@ async function handleStats(ctx) {
     const st = campaign.status();
     return send(res, 200, {
       ok: true,
-      types: SELECTABLE_CAMPAIGN_TYPES,
+      // Ng??i d?ng ch? th?y 2 lo?i c?ng khai; qu?n tr? vi?n th?y ?? 5 lo?i (3 lo?i c?n l?i l?
+      // lo?i engine n?i b? v?n ???c b?n ? b?ng gi?: Organic ng?n, ??c s?u, Ki?m tra t? kh?a).
+      types: isAdmin ? CAMPAIGN_TYPES : SELECTABLE_CAMPAIGN_TYPES,
       trafficPrices: TRAFFIC_PRICES,
       priceEffectiveFrom: PRICE_EFFECTIVE_FROM,
       queryModes: QUERY_MODES,
@@ -441,10 +443,14 @@ async function handleStats(ctx) {
       roles: USER_ROLES,
       userStatuses: USER_STATUSES,
       me: actor,
-      engine: {
-        running: st.running, dbMode: st.dbMode, dbError: st.dbError, threads: st.maxThreads,
-        activeFrom: campaign.settings.activeFrom, activeTo: campaign.settings.activeTo, inActiveHours: st.inActiveHours,
-      },
+      // Chi ti?t h? t?ng (dbMode, dbError, tr?n lu?ng, khung gi?) l? th?ng tin v?n h?nh:
+      // ng??i d?ng th??ng ch? c?n bi?t engine c? ?ang ch?y hay kh?ng.
+      engine: isAdmin
+        ? {
+          running: st.running, dbMode: st.dbMode, dbError: st.dbError, threads: st.maxThreads,
+          activeFrom: campaign.settings.activeFrom, activeTo: campaign.settings.activeTo, inActiveHours: st.inActiveHours,
+        }
+        : { running: st.running, inActiveHours: st.inActiveHours },
     });
   }
 
@@ -1067,27 +1073,32 @@ function streamEvents(ctx) {
   };
   const snapshot = () => {
     const st = campaign.status();
-    const mine = t => isAdmin || t.userId == null || t.userId === actor?.id;
+    // Ch? chi?n d?ch c?a ch?nh ng??i ?ang xem (admin th?y t?t c?). Vi?c thi?u ch? s? h?u
+    // (userId = null) kh?ng ???c coi l? "c?a m?i ng??i" n?a.
+    const mine = t => isAdmin || (t.userId != null && t.userId === actor?.id);
     const tasks = st.tasks.filter(mine);
     const ids = new Set(tasks.map(t => t.id));
+    const myWorkers = st.workers.filter(w => ids.has(w.taskId));
+    // Nh?t k? engine l? log v?n h?nh d?ng chung (IP, d?ch v? n?i b?, l?i h? t?ng).
+    // Ng??i d?ng th??ng ch? nh?n nh?ng d?ng nh?c t?i t? kh?a c?a ch?nh h?.
+    const keys = [...new Set([...tasks.map(t => t.keyword), ...myWorkers.map(w => w.keyword)].filter(Boolean))];
+    const mineEvent = line => keys.some(k => String(line).includes(`"${k}"`) || String(line).includes(`${k} (`) || String(line).includes(` ${k}:`));
     return {
       type: 'status',
       at: Date.now(),
       running: st.running,
-      dbMode: st.dbMode,
       inActiveHours: st.inActiveHours,
-      quotaBlocked: st.quotaBlocked,
-      threads: st.maxThreads,
+      ...(isAdmin ? { dbMode: st.dbMode, dbError: st.dbError, quotaBlocked: st.quotaBlocked, threads: st.maxThreads } : {}),
       tasks: tasks.map(t => ({
         id: t.id, dbId: t.dbId, keyword: t.keyword, type: t.type, unit: t.unit, count: t.count,
         due: t.due, doneNow: t.doneNow, dbToday: t.dbToday, ownerId: t.userId,
         today: t.today,
       })),
-      workers: st.workers.filter(w => ids.has(w.taskId)).map(w => ({
+      workers: myWorkers.map(w => ({
         slot: w.slot, taskId: w.taskId, keyword: w.keyword, step: w.step, ip: w.ip,
         elapsed: w.elapsed, captchaLeft: w.captchaLeft, res: w.res ? { ramMB: w.res.ramMB, cpuPct: w.res.cpuPct } : null,
       })),
-      events: st.events.slice(0, 8),
+      events: (isAdmin ? st.events : st.events.filter(mineEvent)).slice(0, 8),
     };
   };
 

@@ -21,7 +21,7 @@ fs.mkdirSync(OUT, { recursive: true });
 copy(path.join(ROOT, 'agent', 'agent.mjs'), path.join(OUT, 'agent', 'agent.mjs'));
 copy(path.join(ROOT, 'agent', 'agent.config.example.json'), path.join(OUT, 'agent', 'agent.config.example.json'));
 copyDir(path.join(ROOT, 'workflow'), path.join(OUT, 'workflow'), (p, e) => e.isDirectory() || p.endsWith('.mjs'));
-for (const f of ['campaign-types.mjs', 'proxy-pool.mjs', 'omnilogin-launcher.mjs', 'monitor.mjs', 'package-hash.mjs']) copy(path.join(ROOT, f), path.join(OUT, f));
+for (const f of ['campaign-types.mjs', 'proxy-pool.mjs', 'omnilogin-launcher.mjs', 'monitor.mjs', 'package-hash.mjs', 'time.mjs']) copy(path.join(ROOT, f), path.join(OUT, f));
 fs.writeFileSync(path.join(OUT, 'package.json'), JSON.stringify({ name: 'wingtraffic-may-phu', version: '1.0.0', private: true, type: 'module' }, null, 2));
 copyDir(path.join(ROOT, 'node_modules', '@omnilogin'), path.join(OUT, 'node_modules', '@omnilogin'));
 copy(process.execPath, path.join(OUT, 'node.exe'));

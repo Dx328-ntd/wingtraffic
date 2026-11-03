@@ -94,7 +94,12 @@
   });
 
   var next = new URLSearchParams(location.search).get('next') || '';
-  if (!next || next.charAt(0) !== '/' || next.indexOf('\\') !== -1 || next.charAt(1) === '/') next = '';
+  // Ch? nh?n ???ng d?n n?i b?; b? qua trang c?ng khai/??ng nh?p ?? tr?nh chuy?n h??ng v?ng
+  // (tr??c ??y /login?next=/login l?m trang t? n?p l?i v? nu?t lu?n th?ng b?o sai m?t kh?u).
+  var NEXT_SKIP = ['/login', '/gioi-thieu', '/bang-gia', '/'];
+  var nextPath = next.split('?')[0].split('#')[0];
+  if (!next || next.charAt(0) !== '/' || next.indexOf('\\') !== -1 || next.charAt(1) === '/'
+    || next.indexOf('/api/') === 0 || NEXT_SKIP.indexOf(nextPath) !== -1) next = '';
 
   function home(role) { return next || (role === 'admin' ? '/admin' : '/my'); }
 
