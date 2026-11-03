@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const ROOT_FILES = ['agent/agent.mjs', 'campaign-types.mjs', 'proxy-pool.mjs', 'omnilogin-launcher.mjs', 'monitor.mjs', 'package-hash.mjs'];
+const ROOT_FILES = ['agent/agent.mjs', 'campaign-types.mjs', 'proxy-pool.mjs', 'omnilogin-launcher.mjs', 'monitor.mjs', 'package-hash.mjs', 'time.mjs'];
 
 export function packageFiles(root) {
   const out = [...ROOT_FILES];
