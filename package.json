@@ -1,7 +1,7 @@
 {
   "name": "omni-google-search",
   "version": "1.0.0",
-  "description": "Tim kiem Google bang tu khoa tren profile OmniLogin",
+  "description": "Quan ly chien dich",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.mjs",
     "db:init": "node --env-file-if-exists=.env database/init.mjs",

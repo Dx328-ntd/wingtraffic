@@ -30,3 +30,10 @@ Desktop.ini
 
 # Ban sao ma nguon ban be gui lai (co .env, data rieng cua ho)
 ban be gui lai/
+
+# Tai lieu huong dan / ghi chu noi bo: chi giu tren may, khong dua len kho ma
+*.md
+!README.md
+CAPTCHA-NOTES.txt
+*.txt
+!requirements.txt

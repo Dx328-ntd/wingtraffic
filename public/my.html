@@ -516,7 +516,7 @@ body.my .crumbs { display: none; }
       if (!$('chartMonth').options.length) { fillMonths(); const r = zoomRange(ZOOM); $('chFrom').value = r.from; $('chTo').value = r.to; }
       fillQueryModes();
       nav();
-      if (!META.engine.dbMode) {
+      if (META.engine.dbMode === false) {
         document.querySelector('main.main').insertAdjacentHTML('afterbegin',
           '<div class="alert err" style="margin-bottom:14px"><b>Engine chưa dùng CSDL</b> (thiếu better-sqlite3?) — chiến dịch sẽ không chạy. Xem mục “Cài đặt” trong Hướng dẫn sử dụng.</div>');
       }

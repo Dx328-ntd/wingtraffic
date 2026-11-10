@@ -430,8 +430,8 @@ async function handleStats(ctx) {
     const st = campaign.status();
     return send(res, 200, {
       ok: true,
-      // Ng??i d?ng ch? th?y 2 lo?i c?ng khai; qu?n tr? vi?n th?y ?? 5 lo?i (3 lo?i c?n l?i l?
-      // lo?i engine n?i b? v?n ???c b?n ? b?ng gi?: Organic ng?n, ??c s?u, Ki?m tra t? kh?a).
+      // Người dùng chỉ thấy các loại công khai; quản trị viên thấy đủ các loại
+      // (loại engine nội bộ vẫn được bán ở bảng giá).
       types: isAdmin ? CAMPAIGN_TYPES : SELECTABLE_CAMPAIGN_TYPES,
       trafficPrices: TRAFFIC_PRICES,
       priceEffectiveFrom: PRICE_EFFECTIVE_FROM,
@@ -443,8 +443,8 @@ async function handleStats(ctx) {
       roles: USER_ROLES,
       userStatuses: USER_STATUSES,
       me: actor,
-      // Chi ti?t h? t?ng (dbMode, dbError, tr?n lu?ng, khung gi?) l? th?ng tin v?n h?nh:
-      // ng??i d?ng th??ng ch? c?n bi?t engine c? ?ang ch?y hay kh?ng.
+      // Chi tiết hạ tầng (dbMode, dbError, trần luồng, khung giờ) là thông tin vận hành:
+      // người dùng thường chỉ cần biết engine có đang chạy hay không.
       engine: isAdmin
         ? {
           running: st.running, dbMode: st.dbMode, dbError: st.dbError, threads: st.maxThreads,
@@ -1073,14 +1073,14 @@ function streamEvents(ctx) {
   };
   const snapshot = () => {
     const st = campaign.status();
-    // Ch? chi?n d?ch c?a ch?nh ng??i ?ang xem (admin th?y t?t c?). Vi?c thi?u ch? s? h?u
-    // (userId = null) kh?ng ???c coi l? "c?a m?i ng??i" n?a.
+    // Chỉ chiến dịch của chính người đang xem (admin thấy tất cả). Việc thiếu chủ sở hữu
+    // (userId = null) không được coi là "của mọi người" nữa.
     const mine = t => isAdmin || (t.userId != null && t.userId === actor?.id);
     const tasks = st.tasks.filter(mine);
     const ids = new Set(tasks.map(t => t.id));
     const myWorkers = st.workers.filter(w => ids.has(w.taskId));
-    // Nh?t k? engine l? log v?n h?nh d?ng chung (IP, d?ch v? n?i b?, l?i h? t?ng).
-    // Ng??i d?ng th??ng ch? nh?n nh?ng d?ng nh?c t?i t? kh?a c?a ch?nh h?.
+    // Nhật ký engine là log vận hành dùng chung (IP, dịch vụ nội bộ, lỗi hạ tầng).
+    // Người dùng thường chỉ nhận những dòng nhắc tới từ khóa của chính họ.
     const keys = [...new Set([...tasks.map(t => t.keyword), ...myWorkers.map(w => w.keyword)].filter(Boolean))];
     const mineEvent = line => keys.some(k => String(line).includes(`"${k}"`) || String(line).includes(`${k} (`) || String(line).includes(` ${k}:`));
     return {

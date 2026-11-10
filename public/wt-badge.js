@@ -97,9 +97,9 @@
     if (prev) { if (prev.code) showDone(prev.code); else run(prev); }
   }
 
-  // Ch?n ngay n?u th? <script> n?m trong body; n?u n?m trong <head> (ho?c ch?a c? body)
-  // th? ch? DOMContentLoaded. Tr??c ??y `a && b || document.body` lu?n ??ng n?n nh?nh
-  // ch? DOMContentLoaded kh?ng bao gi? ch?y, v? mount() c? th? g?p document.body = null.
+  // Chèn ngay nếu thẻ <script> nằm trong body; nếu nằm trong <head> (hoặc chưa có body)
+  // thì chờ DOMContentLoaded. Trước đây `a && b || document.body` luôn đúng nên nhánh
+  // chờ DOMContentLoaded không bao giờ chạy, và mount() có thể gặp document.body = null.
   var inHead = !me.parentNode || me.parentNode === document.head || me.parentNode === document.documentElement;
   if (!inHead && document.body) mount();
   else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
