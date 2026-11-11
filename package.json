@@ -1,9 +1,11 @@
 {
   "name": "omni-google-search",
   "version": "1.0.0",
-  "description": "Quan ly chien dich",
+  "description": "Quản lý chiến dịch",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.mjs",
+    "start:prod": "node --env-file-if-exists=.env serve-prod.mjs",
+    "build:public": "node build-public.mjs",
     "db:init": "node --env-file-if-exists=.env database/init.mjs",
     "db:import": "node --env-file-if-exists=.env database/import-tasks.mjs",
     "db:fix-keywords": "node --env-file-if-exists=.env database/fix-keywords.mjs",
@@ -24,6 +26,8 @@
     "test:upgrades": "node tests/upgrades.test.mjs",
     "test:footer": "node tests/footer-check.test.mjs && node tests/footer-flow.test.mjs",
     "test:remote": "node tests/remote.test.mjs",
+    "test:tz": "node tests/timezone.test.mjs",
+    "test:sse": "node tests/sse-scope.test.mjs",
     "build:may-phu": "node build-may-phu.mjs"
   },
   "keywords": [],
@@ -33,9 +37,11 @@
     "@omnilogin/sdk": "^0.1.0",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^13.0.3",
-    "jsonwebtoken": "^9.0.3",
-    "nopecha": "^1.0.11"
+    "jsonwebtoken": "^9.0.3"
   },
   "type": "module",
-  "main": "server.mjs"
+  "main": "server.mjs",
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
 }

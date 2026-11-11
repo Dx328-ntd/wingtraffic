@@ -29,7 +29,7 @@ async function call(method, path, opts = {}) {
   const handled = await gate.gateGuard({ req, res, url: new URL(path, 'http://x'), loadDeps });
   return { handled, res };
 }
-const cookieOf = res => { const m = /omni_gate=([^;]+)/.exec(String(res.headers['Set-Cookie'] || '')); return m ? `omni_gate=${m[1]}` : ''; };
+const cookieOf = res => { const m = /gw=([^;]+)/.exec(String(res.headers['Set-Cookie'] || '')); return m ? `gw=${m[1]}` : ''; };
 const form = o => new URLSearchParams(o).toString();
 
 console.log('\n== nhận diện truy cập từ ngoài ==');
@@ -65,6 +65,8 @@ r = await call('GET', '/api/campaigns', { headers: TUNNEL });
 ok('chưa nhập: API trả 401 JSON {gate:true}', r.handled && r.res.status === 401 && JSON.parse(r.res.body).gate === true);
 r = await call('GET', '/wt-badge.js', { headers: TUNNEL });
 ok('huy hiệu footer: GET /wt-badge.js qua cổng KHÔNG cần mật khẩu (website khách nhúng)', r.handled === false);
+r = await call('GET', '/embed.js', { headers: TUNNEL });
+ok('huy hiệu footer: GET /embed.js (mã mới) qua cổng KHÔNG cần mật khẩu', r.handled === false);
 r = await call('GET', '/logo-icon.png', { headers: TUNNEL });
 ok('huy hiệu footer: GET /logo-icon.png qua cổng không cần mật khẩu', r.handled === false);
 r = await call('POST', '/wt-badge.js', { headers: TUNNEL, body: '' });
@@ -83,7 +85,7 @@ const goodCookie = cookieOf(r.res);
 ok('nhập ĐÚNG: 303 về trang đang vào + cấp cookie HttpOnly/Secure (qua https)', r.res.status === 303 && r.res.headers.Location === '/my' && !!goodCookie && /HttpOnly/.test(r.res.headers['Set-Cookie']) && /Secure/.test(r.res.headers['Set-Cookie']));
 r = await call('GET', '/my', { headers: { ...TUNNEL, cookie: goodCookie } });
 ok('có cookie đã qua cổng: request đi tiếp vào app', r.handled === false);
-r = await call('GET', '/api/events', { headers: { ...TUNNEL, cookie: `omni_token=abc; ${goodCookie}` } });
+r = await call('GET', '/api/events', { headers: { ...TUNNEL, cookie: `sid=abc; ${goodCookie}` } });
 ok('cookie đăng nhập app đi kèm vẫn nhận ra cookie cổng', r.handled === false);
 r = await call('GET', '/my', { headers: { ...TUNNEL, cookie: goodCookie.replace(/.$/, c => (c === '0' ? '1' : '0')) } });
 ok('cookie bị sửa chữ ký: bị chặn lại', r.handled && r.res.status === 401);

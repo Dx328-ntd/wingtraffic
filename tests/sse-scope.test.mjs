@@ -23,6 +23,12 @@ const end = src.indexOf('const NEW_PATHS', start);
 if (start < 0 || end < 0) { console.log('FAIL  không trích được streamEvents từ api.mjs'); process.exit(1); }
 const fnSrc = src.slice(start, end);
 
+// Các helper che dữ liệu (maskIp/publicStep/sanitizeEvent...) nằm ngoài hàm streamEvents.
+const hStart = src.indexOf('const DEVICE_LABEL =');
+const hEnd = src.indexOf('let dbPromise = null;', hStart);
+if (hStart < 0 || hEnd < 0) { console.log('FAIL  không trích được helper che dữ liệu từ api.mjs'); process.exit(1); }
+const helperSrc = src.slice(hStart, hEnd);
+
 const status = () => ({
   running: true, dbMode: true, dbError: 'SQLITE_BUSY', quotaBlocked: false, maxThreads: 7, inActiveHours: true,
   tasks: [
@@ -58,6 +64,7 @@ function frame(actor) {
   vm.runInContext(`
     const unreadCount = () => 3;
     const SSE_INTERVAL_MS = 100000;
+    ${helperSrc}
     ${fnSrc}
     streamEvents(ctx);
   `, sandbox, { filename: 'streamEvents-extract.js' });

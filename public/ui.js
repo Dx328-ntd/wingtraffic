@@ -34,6 +34,31 @@
     var p = function (n) { return ('0' + n).slice(-2); };
     return p(d.getDate()) + '/' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
   };
+  // Múi giờ hiển thị thống nhất toàn hệ thống (mặc định Việt Nam).
+  UI.TZ = 'Asia/Ho_Chi_Minh';
+  UI.dbTime = function (s) {
+    // Nhận chuỗi thời gian 'YYYY-MM-DD HH:MM:SS' hoặc ISO/epoch.
+    if (s === null || s === undefined || s === '') return null;
+    if (typeof s === 'number') { var dn = new Date(s); return isNaN(dn) ? null : dn; }
+    var str = String(s).trim();
+    var iso = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(str)
+      ? str.replace(' ', 'T') + (/[Zz]$|[+-]\d{2}:?\d{2}$/.test(str) ? '' : 'Z')
+      : str;
+    var d = new Date(iso);
+    return isNaN(d) ? null : d;
+  };
+  UI.tzParts = function (s) {
+    var d = UI.dbTime(s);
+    if (!d) return null;
+    var p = function (n) { return ('0' + n).slice(-2); };
+    // Chuyển sang giờ APP_TZ rồi đọc các thành phần.
+    var t = new Date(d.toLocaleString('en-US', { timeZone: UI.TZ }));
+    return { d: p(t.getDate()), m: p(t.getMonth() + 1), y: t.getFullYear(), h: p(t.getHours()), mi: p(t.getMinutes()), s: p(t.getSeconds()) };
+  };
+  UI.atShort = function (s) { var t = UI.tzParts(s); return t ? t.h + ':' + t.mi + ' ' + t.d + '/' + t.m : '—'; };
+  UI.atFull = function (s) { var t = UI.tzParts(s); return t ? t.h + ':' + t.mi + ':' + t.s + ' ' + t.d + '/' + t.m + '/' + t.y : '—'; };
+  UI.atDay = function (s) { var t = UI.tzParts(s); return t ? t.d + '/' + t.m + '/' + t.y : '—'; };
+  UI.atTime = function (s) { var t = UI.tzParts(s); return t ? t.h + ':' + t.mi + ':' + t.s : '—'; };
   UI.node = function (html) {
     var t = document.createElement('template');
     t.innerHTML = String(html).trim();
@@ -59,6 +84,8 @@
       : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
     var res = await fetch(path, init);
     var data = await res.json().catch(function () { return {}; });
+    // Không tự chuyển hướng khi đang ở trang đăng nhập: 401 ở đây là "sai tài khoản/mật khẩu",
+    // không phải "phiên hết hạn" — chuyển hướng sẽ xoá mất thông báo lỗi.
     if (res.status === 401 && opts.noRedirect !== true && location.pathname !== '/login') {
       location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search));
       throw new Error('Phiên đăng nhập đã hết hạn.');

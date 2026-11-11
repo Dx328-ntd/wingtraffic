@@ -1,0 +1,15 @@
+# Cloudflare Tunnel: không mở cổng vào, origin chỉ nghe 127.0.0.1:3300.
+# 1) cloudflared tunnel login
+# 2) cloudflared tunnel create wingtraffic
+# 3) copy file này thành %USERPROFILE%\.cloudflared\config.yml và điền tunnel/credentials
+# 4) cloudflared tunnel route dns wingtraffic wingtraffic.tech
+# 5) cloudflared service install
+tunnel: <TUNNEL_ID>
+credentials-file: C:\Users\<user>\.cloudflared\<TUNNEL_ID>.json
+
+ingress:
+  - hostname: wingtraffic.tech
+    service: http://127.0.0.1:3300
+  - hostname: www.wingtraffic.tech
+    service: http://127.0.0.1:3300
+  - service: http_status:404

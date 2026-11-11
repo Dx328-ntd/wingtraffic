@@ -22,8 +22,10 @@ const c1 = Number(campaigns.create({ userId: u1, keyword: 'giay the thao', targe
 const c2 = Number(campaigns.create({ userId: u1, keyword: 'may loc nuoc', targetUrl: 'https://shop.example/loc', type: 'direct_visit', count: 10, unit: 'hour' }).lastInsertRowid);
 const c3 = Number(campaigns.create({ userId: u2, keyword: 'cua khach hai', targetUrl: 'https://khac.example/', count: 5, unit: 'day' }).lastInsertRowid);
 campaigns.setApproval(c1, { status: 'approved', byId: aid }); campaigns.setStatus(c1, 'running', aid);
-const nowStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
-const yesterday = () => { const d = new Date(Date.now() - 86400000), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} 10:00:00`; };
+// CSDL ghi UTC (xem time.mjs) nên dữ liệu mẫu cũng phải theo UTC, nếu không test sẽ
+// lệch khi chạy trên máy chủ khác múi giờ.
+const nowStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`; };
+const yesterday = () => { const d = new Date(Date.now() - 86400000), p = n => String(n).padStart(2, '0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} 10:00:00`; };
 for (let i = 0; i < 2; i++) runs.record({ campaignId: c1, userId: u1, status: 'ok', at: yesterday(), position: 4, deviceKind: 'desktop', query: 'giay the thao' });
 runs.record({ campaignId: c1, userId: u1, status: 'notfound', at: yesterday(), deviceKind: 'mobile', query: 'giay the thao' });
 for (let i = 0; i < 3; i++) runs.record({ campaignId: c1, userId: u1, status: 'ok', at: nowStr(), position: 3, deviceKind: 'desktop', query: 'giay the thao' });

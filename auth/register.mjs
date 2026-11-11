@@ -13,7 +13,7 @@ export class RegisterError extends Error {
 }
 
 export function registrationOpen(env = process.env) {
-  return env.REGISTER_OPEN !== '0';
+  return env.REGISTER_OPEN === '1' || env.REGISTER_OPEN === 'true';
 }
 
 export function normalizeIp(ip) {

@@ -25,7 +25,7 @@ export function isPrivateIp(ip) {
 
 export function hasFooterBadge(html) {
   const s = String(html || '');
-  if (/<script\b[^>]*\bsrc\s*=\s*["']?[^"'\s>]*\/wt-badge\.js(?:[?#][^"'\s>]*)?["'\s>]/i.test(s)) return true;
+  if (/<script\b[^>]*\bsrc\s*=\s*["']?[^"'\s>]*\/(?:wt-badge|embed)\.js(?:[?#][^"'\s>]*)?["'\s>]/i.test(s)) return true;
   return /\bid\s*=\s*["']?wtb["'\s>]/i.test(s) && /wtb-btn/i.test(s);
 }
 

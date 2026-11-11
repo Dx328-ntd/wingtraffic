@@ -220,7 +220,7 @@ r = await call('POST', '/api/users', { username: newUser, password: 'matkhau123'
 created.users.push(r.data?.user?.id);
 r = await call('POST', '/api/login', { username: newUser, password: 'matkhau123' }, { as: 'user' });
 check('POST /api/login (tài khoản thường)', r.status, 200);
-check('   có cookie riêng', /^omni_token=/.test(userCookie), true);
+check('   có cookie riêng', /^sid=/.test(userCookie), true);
 
 r = await call('GET', '/api/campaigns', undefined, { as: 'user' });
 check('GET /api/campaigns (tài khoản thường)', r.status, 200);

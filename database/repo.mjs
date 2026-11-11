@@ -1,15 +1,9 @@
 import { db } from './init.mjs';
 import { txnCode } from '../wallet.mjs';
+import { now, today, stamp, inAppTz, APP_TZ } from '../time.mjs';
 
-export function now() {
-  const d = new Date();
-  const p = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-
-export function today() {
-  return now().slice(0, 10);
-}
+// Một quy ước thời gian duy nhất (xem ../time.mjs): CSDL ghi UTC, hiển thị theo APP_TZ.
+export { now, today, stamp, inAppTz, APP_TZ };
 
 const USER_FIELDS = ['username', 'password_hash', 'pw_changed_at', 'role', 'display_name', 'status', 'daily_quota', 'last_login_at'];
 const CAMPAIGN_FIELDS = ['name', 'keyword', 'target_url', 'type', 'count', 'unit', 'query_mode', 'max_threads', 'status', 'approval_status', 'reject_reason', 'approved_by', 'approved_at', 'priority', 'note', 'start_at', 'end_at', 'updated_at', 'updated_by'];
@@ -56,7 +50,7 @@ const CAMPAIGN_SELECT = `
   JOIN users u ON u.id = c.user_id
   LEFT JOIN users a ON a.id = c.approved_by
   LEFT JOIN users e ON e.id = c.updated_by
-  LEFT JOIN campaign_stats_daily d ON d.campaign_id = c.id AND d.day = date('now', 'localtime')
+  LEFT JOIN campaign_stats_daily d ON d.campaign_id = c.id AND d.day = date('now')
 `;
 
 export const campaigns = {

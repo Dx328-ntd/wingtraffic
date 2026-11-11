@@ -514,7 +514,7 @@ var dbMode = false;
     });
 
     $('runRows').innerHTML = st.recent.map(function (r) {
-      return '<tr><td>' + esc(new Date(r.at).toLocaleTimeString('vi-VN')) + '</td><td>' + esc(r.keyword) + '</td><td class="s-' + r.status + '" title="' + esc(r.error) + '">' + STATUS[r.status] + (r.impression ? ' · 👁 hiển thị' : '') + '</td>' +
+      return '<tr><td>' + esc(UI.atTime(r.at)) + '</td><td>' + esc(r.keyword) + '</td><td class="s-' + r.status + '" title="' + esc(r.error) + '">' + STATUS[r.status] + (r.impression ? ' · 👁 hiển thị' : '') + '</td>' +
         '<td>' + esc(r.position || '—') + '</td><td class="u">' + esc(r.device || '—') + '</td><td class="num">' + (r.onSite ? r.onSite + 's' : '—') + '</td><td class="num">' + (r.pages || '—') + '</td>' +
         '<td>' + esc(r.ip || '—') + (r.proxy ? '<div class="u">' + esc(r.proxy) + '</div>' : '') + '</td>' +
         '<td class="num">' + (r.ramPeakMB ? r.ramPeakMB + ' MB' : '—') + '</td><td class="num">' + (r.cpuAvg != null ? r.cpuAvg + '%' : '—') + '</td><td class="num">' + r.seconds + 's</td></tr>';

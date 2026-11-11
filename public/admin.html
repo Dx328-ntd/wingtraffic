@@ -546,7 +546,9 @@
     const setMsg = (id, text, kind) => { const e = $(id); e.textContent = text || ''; e.className = 'msg' + (kind ? ' ' + kind : ''); };
     const fromInput = v => (v ? String(v).replace('T', ' ') + ':00' : '');
     const toInput = v => (v ? String(v).replace(' ', 'T').slice(0, 16) : '');
-    const fmtDay = s => String(s || '').replace(/^(\d{4})-(\d{2})-(\d{2}).*$/, '$3/$2/$1');
+    // CSDL lưu UTC -> hiển thị theo APP_TZ.
+    const fmtDay = s => UI.atDay(s);
+    const fmtAt = s => UI.atShort(s);
     const BADGE = { pending: 'chờ duyệt', approved: 'đã duyệt', rejected: 'từ chối' };
     const BADGE_VI = { pending: 'Chờ duyệt', approved: 'Đã duyệt', rejected: 'Từ chối' };
     const RUN_LABEL = { idle: 'chưa chạy', running: 'đang chạy', paused: 'tạm dừng', done: 'đủ chỉ tiêu hôm nay', stopped: 'đã dừng' };

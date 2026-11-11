@@ -13,6 +13,7 @@ const snippet = '<script async src="https://wingtraffic.tech/wt-badge.js"></scri
 const legacy = fs.readFileSync(path.join(ROOT, 'public', 'footer-wingtraffic.html'), 'utf8');
 console.log('\n== nhận diện khối huy hiệu ==');
 ok('mã 1 dòng <script src=".../wt-badge.js"> được nhận ra', hasFooterBadge(snippet));
+ok('mã mới <script src=".../embed.js"> cũng được nhận ra', hasFooterBadge('<script async src="https://wingtraffic.tech/embed.js"></script>'));
 ok('mã 1 dòng đổi nháy/thêm thuộc tính/tham số vẫn nhận ra', hasFooterBadge("<script src='http://x.io:3300/wt-badge.js?v=2' defer></script>") && hasFooterBadge('<SCRIPT async src=https://a.b/wt-badge.js></SCRIPT>'));
 ok('khối HTML dài của bản trước vẫn nhận ra', hasFooterBadge(legacy));
 ok('khối dài bị plugin nén (bỏ chú thích/xuống dòng/đổi nháy) vẫn nhận ra', hasFooterBadge(legacy.replace(/<!--[\s\S]*?-->/g, '').replace(/\s*\n\s*/g, ' ').replace(/id="wtb"/g, "id='wtb'")));

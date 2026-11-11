@@ -28,12 +28,17 @@ Thumbs.db
 Desktop.ini
 .vscode/
 
-# Ban sao ma nguon ban be gui lai (co .env, data rieng cua ho)
+# Bản build tĩnh (npm run build:public)
+dist/
+
+# Bản sao mã nguồn bên ngoài gửi lại (có .env/data riêng)
 ban be gui lai/
 
-# Tai lieu huong dan / ghi chu noi bo: chi giu tren may, khong dua len kho ma
+# Tài liệu nội bộ / ghi chú / patch: chỉ giữ trên máy, không đưa lên kho mã
 *.md
 !README.md
 CAPTCHA-NOTES.txt
 *.txt
 !requirements.txt
+*.patch
+dung-app.bat

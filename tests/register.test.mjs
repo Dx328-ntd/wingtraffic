@@ -48,7 +48,7 @@ for (const [label, body] of [['null', null], ['mảng', []], ['chuỗi', 'abc'],
 ok('không trả maxSlots (mô hình gói đã gỡ)', !('maxSlots' in r1));
 ok('không còn hạn mức lượt/ngày (engine đã gỡ)', !('dailyQuota' in validateRegistration(valid, { dailyQuota: 20 })));
 
-ok('mặc định MỞ đăng ký', registrationOpen({}) === true);
+ok('mặc định ĐÓNG đăng ký (an toàn)', registrationOpen({}) === false);
 ok('REGISTER_OPEN=1 -> MỞ', registrationOpen({ REGISTER_OPEN: '1' }) === true);
 ok('REGISTER_OPEN=0 -> ĐÓNG', registrationOpen({ REGISTER_OPEN: '0' }) === false);
 

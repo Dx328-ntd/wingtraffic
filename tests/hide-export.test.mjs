@@ -87,7 +87,8 @@ const c2 = Number(campaigns.create({ userId: u1, keyword: 'chay 2', targetUrl: '
 const c3 = Number(campaigns.create({ userId: u2, keyword: 'khach hai', targetUrl: 'https://y.example/', count: 5, unit: 'day' }).lastInsertRowid);
 campaigns.setApproval(c1, { status: 'approved', byId: aid }); campaigns.setStatus(c1, 'running', aid);
 campaigns.setApproval(c3, { status: 'approved', byId: aid }); campaigns.setStatus(c3, 'running', aid);
-const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
+// CSDL ghi UTC (xem time.mjs) -> dữ liệu mẫu theo UTC để test không phụ thuộc múi giờ máy.
+const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`; };
 for (let i = 0; i < 4; i++) runs.record({ campaignId: c1, userId: u1, status: 'ok', at: stamp(), position: 2, deviceKind: 'desktop', query: 'chay 1' });
 runs.record({ campaignId: c1, userId: u1, status: 'notfound', at: stamp(), deviceKind: 'mobile', query: 'chay 1' });
 runs.record({ campaignId: c3, userId: u2, status: 'ok', at: stamp(), position: 5, deviceKind: 'desktop', query: 'khach hai' });

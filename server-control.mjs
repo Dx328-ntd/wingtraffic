@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { scanSnapshot } from './security-monitor.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 export const BOOT_AT = Date.now();
@@ -43,6 +44,7 @@ export function serverStatus() {
     supervised: process.env.OMNI_SUPERVISED === '1',
     stale: changed.length > 0,
     changed: changed.slice(0, 30),
+    scan: scanSnapshot(),
   };
 }
 

@@ -51,14 +51,14 @@ let r = await call(user1, 'GET', `/api/campaigns/${c1}/log`);
 ok('khách xem log chiến dịch của mình (200)', r.status === 200 && r.data.ok === true);
 ok('chỉ gồm lượt thành công thật (bỏ notfound và lượt chỉ hiển thị): 4 dòng', r.data.total === 4 && r.data.rows.length === 4, JSON.stringify(r.data.total));
 ok('sắp xếp mới nhất trước, STT đánh từ 1', r.data.rows[0].n === 1 && r.data.rows[0].at === '2026-11-01 12:00:00' && r.data.rows[3].at === '2026-10-30 09:00:00');
-ok('mỗi dòng có từ khóa, IP, user agent, thời gian', r.data.rows[1].keyword === 'kèo nhà cái' && r.data.rows[1].ip === '171.252.155.33' && r.data.rows[1].userAgent === UA_D);
+ok('mỗi dòng có từ khóa, IP rút gọn, trình duyệt, thời gian', r.data.rows[1].keyword === 'kèo nhà cái' && r.data.rows[1].ip === '171.252.155.x' && r.data.rows[1].userAgent === 'Chrome · Android');
 ok('danh sách từ khóa để chọn lọc', r.data.keywords.includes('kèo nhà cái') && r.data.keywords.includes('truc tiep keo nha cai'));
 r = await call(user1, 'GET', `/api/campaigns/${c1}/log?keyword=${encodeURIComponent('truc tiep keo nha cai')}`);
-ok('lọc theo từ khóa', r.data.total === 1 && r.data.rows[0].ip === '2001:ee0:4b77::1');
+ok('lọc theo từ khóa', r.data.total === 1 && r.data.rows[0].ip === '2001:ee0::x');
 r = await call(user1, 'GET', `/api/campaigns/${c1}/log?from=2026-11-01&to=2026-11-01`);
 ok('lọc theo khoảng ngày (gồm cả ngày cuối)', r.data.total === 3 && r.data.rows.every(x => x.at.startsWith('2026-11-01')));
 r = await call(user1, 'GET', `/api/campaigns/${c1}/log?from=2026-10-30&to=2026-10-30`);
-ok('lọc đúng một ngày cũ', r.data.total === 1 && r.data.rows[0].ip === '1.53.114.89');
+ok('lọc đúng một ngày cũ', r.data.total === 1 && r.data.rows[0].ip === '1.53.114.x');
 r = await call(user1, 'GET', `/api/campaigns/${c1}/log?pageSize=10&page=2`);
 ok('phân trang: trang 2 trống khi chỉ có 4 dòng', r.data.rows.length === 0 && r.data.page === 2);
 r = await call(user1, 'GET', `/api/campaigns/${c1}/log?from=khong-phai-ngay`);
@@ -67,6 +67,7 @@ r = await call(user2, 'GET', `/api/campaigns/${c1}/log`);
 ok('khách khác KHÔNG xem được log của người khác (403)', r.status === 403);
 r = await call(admin, 'GET', `/api/campaigns/${c1}/log`);
 ok('admin xem được', r.status === 200 && r.data.total === 4);
+ok('admin nhận IP + user agent đầy đủ để vận hành', r.data.rows[1].ip === '171.252.155.33' && r.data.rows[1].userAgent === UA_D);
 r = await call(user1, 'GET', '/api/campaigns/99999/log');
 ok('chiến dịch không tồn tại -> 404', r.status === 404);
 
@@ -75,8 +76,8 @@ r = await call(user1, 'GET', `/api/campaigns/${c1}/log.csv?from=2026-11-01&to=20
 ok('tải CSV (200, đúng Content-Type, tên file)', r.status === 200 && /text\/csv/.test(r.headers['Content-Type']) && new RegExp(`filename="WingTraffic-log-chien-dich-${c1}-\\d{4}-\\d{2}-\\d{2}\\.csv"`).test(r.headers['Content-Disposition']));
 const lines = r.text.replace(/^﻿/, '').trim().split('\r\n');
 ok('CSV có BOM UTF-8 (Excel đọc đúng tiếng Việt) + dòng tiêu đề', r.text.charCodeAt(0) === 0xFEFF && lines[0] === 'STT,Từ khóa,IP,User Agent,Thời gian');
-ok('CSV đủ 3 dòng dữ liệu, thời gian dạng HH:MM DD/MM/YYYY', lines.length === 4 && /,11:09 01\/11\/2026$/.test(lines.find(l => l.includes('171.252.155.33'))));
-ok('chống chèn công thức Excel (ô bắt đầu bằng = được thêm dấu nháy)', r.text.includes("'=cmd|x") && r.text.includes(`"'=HYPERLINK(""x"")"`));
+ok('CSV đủ 3 dòng dữ liệu, thời gian dạng HH:MM DD/MM/YYYY', lines.length === 4 && /,11:09 01\/11\/2026$/.test(lines.find(l => l.includes('171.252.155.x'))));
+ok('chống chèn công thức Excel cho từ khóa (ô bắt đầu bằng = được thêm dấu nháy)', r.text.includes(`"'=HYPERLINK(""x"")"`));
 r = await call(user2, 'GET', `/api/campaigns/${c1}/log.csv`);
 ok('khách khác KHÔNG tải được log của người khác (403)', r.status === 403);
 r = await call(user1, 'GET', `/api/campaigns/${c1}/log-exports`);
@@ -84,6 +85,18 @@ ok('lịch sử tải ghi lại lần tải: người tải, ngày lọc, số d
 ok('lần tải bị từ chối không bị ghi vào lịch sử', runExports.list(c1).length === 1);
 r = await call(user2, 'GET', `/api/campaigns/${c1}/log-exports`);
 ok('khách khác KHÔNG xem được lịch sử tải của người khác (403)', r.status === 403);
+
+r = await call(admin, 'GET', `/api/campaigns/${c1}/log.csv?from=2026-11-01&to=2026-11-01`);
+ok('admin CSV chống chèn công thức cho cả IP', r.text.includes("'=cmd|x") && r.text.includes(`"'=HYPERLINK(""x"")"`));
+
+console.log('\n== API: lượt chạy gần đây (che hạ tầng với khách) ==');
+r = await call(user1, 'GET', `/api/runs?campaignId=${c1}&limit=20`);
+const userRun = r.data.runs.find(x => x.ip === '171.252.155.x');
+ok('khách: IP rút gọn + UA rút gọn', !!userRun && userRun.user_agent === 'Chrome · Android');
+ok('khách: không nhận proxy / RAM / CPU / lỗi nội bộ', !!userRun && !('proxy' in userRun) && !('ram_peak_mb' in userRun) && !('cpu_avg' in userRun) && !('error' in userRun));
+r = await call(admin, 'GET', `/api/runs?campaignId=${c1}&userId=${u1}&limit=20`);
+const adminRun = r.data.runs.find(x => x.ip === '171.252.155.33');
+ok('admin: vẫn nhận IP/UA đầy đủ', !!adminRun && adminRun.user_agent === UA_D);
 
 console.log(`\nKết quả: ${pass} PASS, ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

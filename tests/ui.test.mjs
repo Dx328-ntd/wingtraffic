@@ -142,8 +142,8 @@ if (UI) {
 
 console.log('\n== server.mjs: phục vụ tài nguyên giao diện ==');
 const server = fs.readFileSync(path.join(ROOT, 'server.mjs'), 'utf8');
-ok('server.mjs khai báo /ui.css -> public/ui.css', /'\/ui\.css',\s*\['public\/ui\.css',\s*'text\/css; charset=utf-8'\]/.test(server));
-ok('server.mjs khai báo /ui.js -> public/ui.js', /'\/ui\.js',\s*\['public\/ui\.js',\s*'text\/javascript; charset=utf-8'\]/.test(server));
+ok('server.mjs khai báo /ui.css -> ui.css trong PUBLIC_DIR', /'\/ui\.css',\s*\['ui\.css',\s*'text\/css; charset=utf-8'\]/.test(server));
+ok('server.mjs khai báo /ui.js -> ui.js trong PUBLIC_DIR', /'\/ui\.js',\s*\['ui\.js',\s*'text\/javascript; charset=utf-8'\]/.test(server));
 ok('hai file này mở cho cả khách chưa đăng nhập', /'\/ui\.css', '\/ui\.js'/.test(server));
 ok('có route phục vụ ASSETS trước khi tới PAGES', server.indexOf('ASSETS.has(url.pathname)') < server.indexOf('PAGES[url.pathname]'));
 ok("server.mjs có route '/bang-gia' -> public/pricing.html", /'\/bang-gia':\s*'pricing\.html'/.test(server));

@@ -1,12 +1,13 @@
 import crypto from 'node:crypto';
 import { rateLimiter, normalizeIp } from './auth/register.mjs';
+import { noteStatus } from './security-monitor.mjs';
 
-export const GATE_COOKIE = 'omni_gate';
+export const GATE_COOKIE = process.env.GATE_COOKIE || 'gw';
 export const GATE_PATH = '/__cong';
 export const GATE_TTL_SEC = 12 * 60 * 60;
 export const GATE_MIN_PASSWORD = 6;
 export const GATE_MAX_PASSWORD = 72;
-export const GATE_OPEN_PATHS = new Set(['/wt-badge.js', '/logo-icon.png']);
+export const GATE_OPEN_PATHS = new Set(['/wt-badge.js', '/embed.js', '/logo-icon.png']);
 const K_ENABLED = 'gate_enabled';
 const K_HASH = 'gate_password_hash';
 const LOOPBACK = new Set(['127.0.0.1', '::1']);
@@ -118,6 +119,7 @@ async function readForm(req, limit = 4096) {
 }
 
 function sendHtml(res, status, html, extra = {}) {
+  noteStatus(status);
   res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', ...extra });
   res.end(html);
   return true;

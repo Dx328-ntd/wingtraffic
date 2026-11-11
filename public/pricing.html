@@ -99,7 +99,7 @@
         {
           "@type": "Question",
           "name": "Lượt truy cập có giống người dùng thật không?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Có. Mỗi lượt là một phiên truy cập hoàn chỉnh, thời gian ở lại ngẫu nhiên trong khoảng cấu hình, mỗi lượt đến từ một địa chỉ IP riêng." }
+          "acceptedAnswer": { "@type": "Answer", "text": "Có. Mỗi lượt là một phiên truy cập hoàn chỉnh, thời gian ở lại ngẫu nhiên trong khoảng cấu hình, và mỗi lượt đi qua một địa chỉ IP dân cư riêng (dải IP luân phiên theo từng lượt; chế độ chạy theo profile trình duyệt thì mỗi profile giữ một IP)." }
         },
         {
           "@type": "Question",
@@ -114,12 +114,12 @@
         {
           "@type": "Question",
           "name": "Tôi cần chuẩn bị gì để chạy?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Không cần gì cả: chỉ gửi từ khóa, URL đích và chỉ tiêu mỗi giờ/ngày. Hạ tầng do hệ thống lo, engine chạy 24/7 và ghi lại từng lượt." }
+          "acceptedAnswer": { "@type": "Answer", "text": "Một việc duy nhất ở phía bạn: dán mã HTML WingTraffic (1 dòng script) vào footer website đích để hệ thống xác nhận bạn là chủ site; sau đó chỉ gửi từ khóa, URL đích và chỉ tiêu mỗi giờ/ngày. Hạ tầng (profile trình duyệt, dải IP) do hệ thống lo, engine rải lượt theo lịch và ghi lại từng lượt." }
         },
         {
           "@type": "Question",
           "name": "Dữ liệu và nhật ký được lưu bao lâu?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Không giới hạn theo gói: từ khóa, URL và nhật ký từng lượt nằm trong CSDL của hệ thống và xem được bất cứ lúc nào ở bảng điều khiển. Nhật ký thao tác được lưu riêng ở trang Quản trị." }
+          "acceptedAnswer": { "@type": "Answer", "text": "Không giới hạn theo gói: từ khóa, URL và nhật ký từng lượt nằm trong hệ thống và xem được bất cứ lúc nào ở bảng điều khiển. Nhật ký thao tác được lưu riêng ở trang Quản trị." }
         }
       ]
     }
@@ -250,7 +250,7 @@
     <div class="hint">Giá trên được áp dụng từ ngày <b id="tpFrom">01/03/2026</b> cho đến khi có thông báo mới nhất. Đơn vị tính là <b>1 lượt xem hoàn thành</b> — lượt lỗi được chạy lại tối đa 3 lần và không tính tiền.</div>
 
     <h3 class="sub-h">Chi tiết theo từng loại chiến dịch trong app</h3>
-    <p class="hint" style="margin-top:6px">5 loại chiến dịch dưới đây là đúng những gì engine chạy.</p>
+    <p class="hint" style="margin-top:6px">5 loại chiến dịch dưới đây là đúng những gì engine chạy; mã dưới mỗi tên là <b>mã loại</b> — dùng để đối chiếu khi bạn xuất dữ liệu.</p>
     <div class="tbl-wrap" style="margin-top:14px">
       <table class="price-tbl">
         <thead><tr>
@@ -258,31 +258,31 @@
         </tr></thead>
         <tbody>
           <tr>
-            <td><b>Organic ngắn</b></td>
+            <td><b>Organic ngắn</b><div class="d"><code>search_click</code></div></td>
             <td>Tìm Google → bấm vào URL → thoát nhanh (bounce), không xem trang con.<span class="d">Dùng để đẩy CTR ngắn hạn, tỷ lệ thoát sẽ tăng.</span></td>
             <td>5–15 giây</td>
             <td class="money">700đ</td>
           </tr>
           <tr>
-            <td><b>Direct</b></td>
+            <td><b>Direct</b><div class="d"><code>direct_visit</code></div></td>
             <td>Vào thẳng URL, ở lại đọc rồi xem 1 trang con.<span class="d">Không có referrer tìm kiếm — phù hợp đẩy “direct traffic”.</span></td>
             <td>60–120 giây</td>
             <td class="money">1.000đ</td>
           </tr>
           <tr class="hi">
-            <td><b>Organic chuẩn</b> <span class="badge info">Chọn nhiều nhất</span></td>
+            <td><b>Organic chuẩn</b> <span class="badge info">Chọn nhiều nhất</span><div class="d"><code>search_dwell</code></div></td>
             <td>Tìm Google → bấm vào URL → đọc 60–120 giây → xem 1 trang con nội bộ.<span class="d">Có referrer Google + thời gian đọc thật: loại lượt dùng cho SEO từ khóa.</span></td>
             <td>60–120 giây</td>
             <td class="money">1.500đ</td>
           </tr>
           <tr>
-            <td><b>Đọc sâu</b></td>
+            <td><b>Đọc sâu</b><div class="d"><code>deep_browse</code></div></td>
             <td>Tìm Google → đọc 4–8 phút → xem 3 trang con nội bộ.<span class="d">Một lượt dài, tín hiệu chất lượng cao — dùng cho bài dài/landing page.</span></td>
             <td>9–20 phút</td>
             <td class="money">6.000đ</td>
           </tr>
           <tr>
-            <td><b>Kiểm tra từ khóa</b></td>
+            <td><b>Kiểm tra từ khóa</b><div class="d"><code>search_only</code></div></td>
             <td>Chỉ tìm Google và ghi lại vị trí URL đích trong kết quả.<span class="d">Không tạo lượt truy cập — dùng để theo dõi thứ hạng.</span></td>
             <td>—</td>
             <td class="money">300đ</td>
@@ -329,14 +329,14 @@
       </div>
       <div class="trust">
         <div class="t">2. Nhật ký tới từng bước</div>
-        <div class="d">Nhật ký ghi lại từng lượt: từ khóa, vị trí URL trong kết quả Google, IP, số giây ở lại, số trang con, và lỗi nếu có. Bạn đối chiếu được thay vì tin vào con số tổng.</div>
+        <div class="d">Nhật ký ghi lại từng lượt: từ khóa, vị trí URL trong kết quả Google, IP rút gọn, số giây ở lại, số trang con, và lỗi nếu có. Bạn đối chiếu được thay vì tin vào con số tổng.</div>
       </div>
       <div class="trust">
         <div class="t">3. Lượt lỗi tự chạy lại</div>
         <div class="d">Lượt lỗi không bị tính là lượt đã chạy: hệ thống thử lại tối đa 3 lần, lỗi được ghi rõ trong nhật ký.</div>
       </div>
       <div class="trust">
-        <div class="t">4. Dữ liệu nằm trong CSDL của bạn</div>
+        <div class="t">4. Dữ liệu nằm trong hệ thống của bạn</div>
         <div class="d">Chiến dịch, chỉ tiêu, lượt chạy, nhật ký thao tác đều xuất ra được và sao lưu được, không phụ thuộc vào bên thứ ba.</div>
       </div>
     </div>
@@ -360,11 +360,11 @@
     <div class="trust-grid" style="margin-top:14px">
       <div class="trust">
         <div class="t">Lượt lỗi không tính tiền</div>
-        <div class="d">Mỗi lượt có nhật ký riêng (vị trí trên Google, IP, thời gian ở lại, lỗi nếu có). Lượt lỗi được chạy lại tối đa 3 lần trước khi tính là hỏng.</div>
+        <div class="d">Mỗi lượt có nhật ký riêng (vị trí trên Google, IP rút gọn, thời gian ở lại, lỗi nếu có). Lượt lỗi được chạy lại tối đa 3 lần trước khi tính là hỏng.</div>
       </div>
       <div class="trust">
         <div class="t">Báo cáo từng lượt</div>
-        <div class="d">Không có “hộp đen”: bạn xem được từng lượt đã chạy — từ khóa nào, IP nào, ở lại bao lâu, đứng vị trí bao nhiêu.</div>
+        <div class="d">Không có “hộp đen”: bạn xem được từng lượt đã chạy — từ khóa nào, IP rút gọn, ở lại bao lâu, đứng vị trí bao nhiêu.</div>
       </div>
       <div class="trust">
         <div class="t">Tạm dừng bất cứ lúc nào</div>
@@ -372,7 +372,7 @@
       </div>
       <div class="trust">
         <div class="t">Không khoá dữ liệu</div>
-        <div class="d">Toàn bộ từ khóa, URL và nhật ký nằm trong CSDL của bạn, xuất ra được bất kỳ lúc nào.</div>
+        <div class="d">Toàn bộ từ khóa, URL và nhật ký nằm trong hệ thống của bạn, xuất ra được bất kỳ lúc nào.</div>
       </div>
     </div>
   </section>
@@ -392,7 +392,7 @@
         <summary>Lượt truy cập có giống người dùng thật không?</summary>
         <div class="note-body">
           <p>Có. Truy cập ảo thường chỉ gọi URL rồi thoát, không có thời gian đọc.</p>
-          <p>Ở đây mỗi lượt là một phiên truy cập hoàn chỉnh, thời gian ở lại ngẫu nhiên trong khoảng bạn đặt, và mỗi lượt đến từ một IP riêng.</p>
+          <p>Ở đây mỗi lượt là một phiên truy cập hoàn chỉnh, thời gian ở lại ngẫu nhiên trong khoảng bạn đặt, và mỗi lượt đi qua một IP dân cư riêng (dải IP luân phiên theo từng lượt; chế độ profile trình duyệt thì mỗi profile giữ một IP riêng).</p>
         </div>
       </details>
       <details class="note">
@@ -415,14 +415,14 @@
       <details class="note">
         <summary>Tôi cần chuẩn bị gì để chạy?</summary>
         <div class="note-body">
-          <p>Không cần gì cả: bạn chỉ gửi từ khóa, URL đích và chỉ tiêu mỗi giờ/ngày.</p>
-          <p>Hạ tầng do hệ thống lo; engine rải lượt theo lịch, đổi IP mỗi lượt và ghi nhật ký từng lượt.</p>
+          <p>Cần đúng một việc ở phía bạn: dán <b>mã HTML WingTraffic</b> (1 dòng <code>&lt;script&gt;</code>) vào <b>footer website đích</b> — hệ thống tự kiểm tra lại và chỉ duyệt chiến dịch khi thấy mã. Sau đó bạn chỉ gửi từ khóa, URL đích và chỉ tiêu mỗi giờ/ngày.</p>
+          <p>Hạ tầng (profile trình duyệt, dải IP luân phiên) do hệ thống lo; engine rải lượt theo lịch và ghi nhật ký từng lượt.</p>
         </div>
       </details>
       <details class="note">
         <summary>Dữ liệu và nhật ký được lưu bao lâu?</summary>
         <div class="note-body">
-          <p>Không giới hạn theo gói: từ khóa, URL và nhật ký từng lượt nằm trong CSDL của hệ thống và xem được bất cứ lúc nào ở bảng điều khiển.</p>
+          <p>Không giới hạn theo gói: từ khóa, URL và nhật ký từng lượt nằm trong hệ thống và xem được bất cứ lúc nào ở bảng điều khiển.</p>
           <p>Nhật ký thao tác (ai duyệt chiến dịch, ai sửa chỉ tiêu) được lưu riêng và xem được ở trang Quản trị.</p>
         </div>
       </details>

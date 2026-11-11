@@ -169,7 +169,7 @@ body.my .crumbs { display: none; }
       <summary><span class="ft">Lượt chạy gần đây</span></summary>
       <div class="fold-body">
         <div class="tbl-wrap"><table id="tblRuns">
-          <thead><tr><th>Thời gian</th><th>Từ khóa</th><th>Trạng thái</th><th>Thiết bị</th><th class="num">Giây</th><th class="num">Vị trí</th><th>IP</th></tr></thead>
+          <thead><tr><th>Thời gian</th><th>Từ khóa</th><th>Trạng thái</th><th>Thiết bị</th><th class="num">Giây</th><th class="num">Vị trí</th><th>IP (rút gọn)</th></tr></thead>
           <tbody></tbody>
         </table></div>
       </div>
@@ -354,11 +354,12 @@ body.my .crumbs { display: none; }
         </div>
         <div style="overflow:auto;max-height:52vh">
           <table id="logTable">
-            <thead><tr><th class="num">STT</th><th>Từ khóa</th><th>IP</th><th>User Agent</th><th class="nw">Thời gian</th></tr></thead>
+            <thead><tr><th class="num">STT</th><th>Từ khóa</th><th>IP (rút gọn)</th><th>Trình duyệt</th><th class="nw">Thời gian</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
         <div id="logPager" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px"></div>
+        <div class="hint">IP chỉ hiển thị 3 nhóm số đầu; trình duyệt chỉ hiển thị loại và hệ điều hành để bảo vệ hạ tầng. Quản trị viên xem đầy đủ.</div>
         <div id="logHistory" hidden style="margin-top:12px">
           <b>Lịch sử tải xuống</b>
           <div style="overflow:auto;max-height:30vh;margin-top:6px">
@@ -401,8 +402,9 @@ body.my .crumbs { display: none; }
     const stat = (v, label) => `<div class="stat"><b>${Number(v || 0)}</b><span>${esc(label)}</span></div>`;
     const fromInput = v => (v ? String(v).replace('T', ' ') + ':00' : '');
     const toInput = v => (v ? String(v).replace(' ', 'T').slice(0, 16) : '');
-    const fmtAt = s => String(s || '').replace(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2}).*$/, '$4 $3/$2/$1');
-    const fmtDay = s => String(s || '').replace(/^(\d{4})-(\d{2})-(\d{2}).*$/, '$3/$2/$1');
+    // Giờ hiển thị theo múi giờ Việt Nam.
+    const fmtAt = s => UI.atShort(s);
+    const fmtDay = s => UI.atDay(s);
     const BADGE = { pending: 'chờ duyệt', approved: 'đã duyệt', rejected: 'từ chối' };
     const BADGE_VI = { pending: 'Chờ duyệt', approved: 'Đã duyệt', rejected: 'Không được duyệt' };
     const RUN_LABEL = { idle: 'chưa chạy', running: 'đang chạy', paused: 'tạm dừng', done: 'đủ chỉ tiêu hôm nay', stopped: 'đã dừng' };
@@ -421,7 +423,7 @@ body.my .crumbs { display: none; }
     const HASH_ALIAS = { notifs: 'thong-bao' };
     document.addEventListener('click', e => { const m = document.getElementById('uMenu'); if (m && m.open && (!m.contains(e.target) || e.target.closest('.pop a, .pop button'))) m.open = false; });
     async function loadFooterCode() {
-      const code = '<scr' + 'ipt async src="' + location.origin + '/wt-badge.js"></scr' + 'ipt>';
+      const code = '<scr' + 'ipt async src="' + location.origin + '/embed.js"></scr' + 'ipt>';
       $('footerCode').value = code;
       return code;
     }
@@ -518,7 +520,7 @@ body.my .crumbs { display: none; }
       nav();
       if (META.engine.dbMode === false) {
         document.querySelector('main.main').insertAdjacentHTML('afterbegin',
-          '<div class="alert err" style="margin-bottom:14px"><b>Engine chưa dùng CSDL</b> (thiếu better-sqlite3?) — chiến dịch sẽ không chạy. Xem mục “Cài đặt” trong Hướng dẫn sử dụng.</div>');
+          '<div class="alert err" style="margin-bottom:14px"><b>Hệ thống chưa sẵn sàng</b> — vui lòng liên hệ quản trị viên.</div>');
       }
     }
 
@@ -718,7 +720,7 @@ body.my .crumbs { display: none; }
           if (['running', 'paused'].includes(c.status)) acts.push(statusBtn(c.id, 'stopped', 'Dừng', 'btn sm'));
           acts.push(`<button class="btn sm blue" data-edit="${c.id}">Sửa</button>`);
           acts.push(`<button class="btn sm" data-hide="${c.id}" title="Ẩn chiến dịch (không xoá được, thống kê vẫn được giữ)">Ẩn</button>`);
-          acts.push(`<button class="btn sm" data-log="${c.id}" title="Xem từng lượt truy cập: từ khóa, IP, user agent, thời gian">Log chi tiết</button>`);
+          acts.push(`<button class="btn sm" data-log="${c.id}" title="Xem từng lượt truy cập: từ khóa, IP rút gọn, trình duyệt, thời gian">Log chi tiết</button>`);
         }
         return `<tr>
           <td data-label="ID">${c.id}</td>
@@ -1058,7 +1060,7 @@ body.my .crumbs { display: none; }
       if ($('chartCampaign').value) q.set('campaignId', $('chartCampaign').value);
       const d = await api('/api/runs?' + q.toString());
       $('tblRuns').tBodies[0].innerHTML = d.runs.length
-        ? d.runs.map(r => `<tr><td class="u">${esc(r.at)}</td><td>${esc(r.keyword || r.campaign_keyword || '')}${r.query && r.query !== (r.keyword || r.campaign_keyword) ? `<div class="u">🔍 truy vấn: ${esc(r.query)}</div>` : ''}</td>
+        ? d.runs.map(r => `<tr><td class="u">${esc(fmtAt(r.at))}</td><td>${esc(r.keyword || r.campaign_keyword || '')}${r.query && r.query !== (r.keyword || r.campaign_keyword) ? `<div class="u">🔍 truy vấn: ${esc(r.query)}</div>` : ''}</td>
             <td class="s-${esc(r.status)}">${esc(r.status)}${r.impression ? ' · 👁 hiển thị' : ''}</td>
             <td>${esc(deviceLabel(r))}</td><td class="num">${r.seconds ?? '-'}</td>
             <td class="num">${r.position ?? '-'}</td><td class="u">${esc(r.ip || '')}</td></tr>`).join('')
@@ -1105,6 +1107,7 @@ body.my .crumbs { display: none; }
     function paintLive(d) {
       if (d.type === 'error') return;
       $('dotRun').className = 'dot ' + (d.running ? 'on' : 'off');
+      // `threads` chỉ admin nhận được (trần luồng là thông tin vận hành) -> người dùng hiển thị không có phần đó.
       $('liveText').textContent = d.running
         ? `Engine đang chạy${d.threads ? ' · ' + d.threads + ' luồng' : ''} · ${d.tasks.length} chiến dịch đủ điều kiện${d.inActiveHours ? '' : ' (ngoài khung giờ chạy)'}`
         : 'Engine đang tạm dừng — chiến dịch phải được admin duyệt và bật mới chạy.';

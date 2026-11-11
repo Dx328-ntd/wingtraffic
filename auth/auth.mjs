@@ -41,7 +41,7 @@ export function generateToken(userId, role = ROLE_DEFAULT, { secret, expiresIn =
   });
 }
 
-export const TOKEN_COOKIE = process.env.AUTH_COOKIE || 'omni_token';
+export const TOKEN_COOKIE = process.env.AUTH_COOKIE || 'sid';
 
 export class AuthError extends Error {
   constructor(message, status = 401) {

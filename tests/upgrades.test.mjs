@@ -50,7 +50,7 @@ ok('sai mật khẩu hiện tại bị từ chối (400), mật khẩu chưa đ�
 r = await call(user1, 'POST', '/api/account/password', { current: 'MatKhauCu1', password: 'MatKhauMoi99', passwordConfirm: 'MatKhauMoi99' });
 ok('đổi mật khẩu đúng -> 200; mật khẩu mới dùng được, cũ hết dùng', r.status === 200 && await auth.verifyPassword('MatKhauMoi99', users.authRow('khach1').password_hash) && !(await auth.verifyPassword('MatKhauCu1', users.authRow('khach1').password_hash)));
 const pwRow = db.prepare('SELECT pw_changed_at FROM users WHERE id = ?').get(u1);
-ok('đổi mật khẩu ghi mốc thu hồi phiên cũ (pw_changed_at) và cấp lại cookie đăng nhập cho phiên hiện tại', pwRow.pw_changed_at > Date.now() - 60000 && /^omni_token=[^;]+; HttpOnly; Path=\/; SameSite=Lax/.test(r.setCookie));
+ok('đổi mật khẩu ghi mốc thu hồi phiên cũ (pw_changed_at) và cấp lại cookie đăng nhập cho phiên hiện tại', pwRow.pw_changed_at > Date.now() - 60000 && /^sid=[^;]+; HttpOnly; Path=\/; SameSite=Lax/.test(r.setCookie));
 {
   const t0 = pwRow.pw_changed_at, secs = Math.floor(t0 / 1000);
   ok('token phát hành TRƯỚC lần đổi mật khẩu bị coi là hết hiệu lực (đăng xuất thiết bị khác)', auth.tokenIsStale(secs - 5, t0) === true && auth.tokenIsStale(secs - 1, t0) === true);

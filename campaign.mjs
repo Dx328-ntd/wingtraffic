@@ -907,8 +907,8 @@ export class Campaign {
     if (task.dbId && res.status === 'captcha') {
       store.notify({
         userId: task.userId, campaignId: task.dbId,
-        title: `Captcha khi chạy "${task.keyword}"`,
-        body: `IP ${res.ip || '?'} — lượt này được thử lại với IP khác.`,
+        title: `Xác minh khi chạy "${task.keyword}"`,
+        body: 'Lượt này gặp bước xác minh và đã được thử lại với một kết nối khác.',
       });
     }
     const label = res.status === 'ok' && r.impression ? '👁 chỉ hiển thị'

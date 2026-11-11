@@ -180,12 +180,90 @@ function toUser(u) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Che thông tin hạ tầng với người dùng thường (đối thủ có thể mở DevTools/CSV).
+// Admin vẫn nhận dữ liệu đầy đủ để vận hành.
+// ---------------------------------------------------------------------------
+const DEVICE_LABEL = { desktop: 'Máy tính', mobile: 'Di động' };
+
+function maskIp(v) {
+  const s = String(v ?? '').trim();
+  if (!s) return '';
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+  if (v4) return `${v4[1]}.${v4[2]}.${v4[3]}.x`;
+  if (s.includes(':')) {
+    const parts = s.split(':').filter(Boolean);
+    return `${parts.slice(0, 2).join(':')}::x`;
+  }
+  return '•••';
+}
+
+function maskUserAgent(v) {
+  const s = String(v ?? '');
+  if (!s) return '';
+  const browser = /Edg\//.test(s) ? 'Edge'
+    : /OPR\/|Opera/.test(s) ? 'Opera'
+      : /Firefox\//.test(s) ? 'Firefox'
+        : /Chrome\//.test(s) ? 'Chrome'
+          : /Safari\//.test(s) ? 'Safari' : 'Trình duyệt';
+  const os = /Android/.test(s) ? 'Android'
+    : /iPhone|iPad|iPod/.test(s) ? 'iOS'
+      : /Windows/.test(s) ? 'Windows'
+        : /Mac OS X/.test(s) ? 'macOS'
+          : /Linux/.test(s) ? 'Linux' : '';
+  return os ? `${browser} · ${os}` : browser;
+}
+
+const PUBLIC_STEPS = [
+  [/captcha|xác minh|chờ giải/i, 'Đang xác minh'],
+  [/ở lại|đang đọc|trang đích|trang con/i, 'Đang đọc trang'],
+  [/google|tìm kiếm/i, 'Đang tìm kiếm'],
+  [/mở|trình duyệt|profile|chuẩn bị/i, 'Đang chuẩn bị'],
+  [/dọn|đóng|hoàn tất/i, 'Đang hoàn tất'],
+];
+
+function publicStep(step) {
+  const s = String(step ?? '');
+  for (const [re, label] of PUBLIC_STEPS) if (re.test(s)) return label;
+  return s ? 'Đang xử lý' : 'Đang chờ';
+}
+
+function sanitizeEvent(line) {
+  return String(line ?? '')
+    .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, m => maskIp(m))
+    .replace(/\b[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,}\b/gi, m => ((m.match(/:/g) || []).length >= 3 || m.includes('::') ? maskIp(m) : m))
+    .replace(/OmniLogin|Omnilogin/gi, 'engine')
+    .replace(/Bridge API|Bridge/gi, 'kết nối')
+    .replace(/\bprofiles?\b/gi, 'phiên')
+    .replace(/\bproxies?\b/gi, 'kết nối')
+    .replace(/CSDL/gi, 'hệ thống')
+    .replace(/captcha/gi, 'xác minh')
+    .replace(/RAM/gi, 'tài nguyên')
+    .replace(/\b35353\b/g, '•••');
+}
+
+function publicRun(row, full = false) {
+  if (!row || full) return row;
+  const out = { ...row };
+  out.ip = maskIp(row.ip);
+  out.user_agent = maskUserAgent(row.user_agent);
+  out.device = DEVICE_LABEL[row.device_kind] || '';
+  delete out.proxy;
+  delete out.ram_peak_mb;
+  delete out.cpu_avg;
+  delete out.error;
+  delete out.attempts;
+  delete out.captchas;
+  return out;
+}
+
 let dbPromise = null;
 async function loadDb() {
   if (!dbPromise) {
     dbPromise = import('./database/repo.mjs').catch(e => {
       dbPromise = null;
-      throw fail(503, `Chưa cài đủ thư viện CSDL (better-sqlite3): ${e.message}`);
+      console.error('[db]', e.message);
+      throw fail(503, 'Hệ thống chưa sẵn sàng. Vui lòng thử lại sau hoặc liên hệ quản trị viên.');
     });
   }
   return dbPromise;
@@ -195,7 +273,8 @@ async function loadAuth() {
   try {
     return await import('./auth/auth.mjs');
   } catch (e) {
-    throw fail(503, `Chưa cài đủ thư viện đăng nhập (bcrypt): ${e.message}`);
+    console.error('[auth]', e.message);
+    throw fail(503, 'Hệ thống chưa sẵn sàng. Vui lòng thử lại sau hoặc liên hệ quản trị viên.');
   }
 }
 
@@ -283,7 +362,7 @@ async function handleAccount(ctx) {
     if (!row || !(await auth.verifyPassword(current, row.password_hash))) throw fail(400, 'Mật khẩu hiện tại chưa đúng.');
     passwordFailLimiter.release(String(me.id));
     repo.users.update(me.id, { password_hash: await auth.hashPassword(next), pw_changed_at: Date.now() });
-    res.setHeader('Set-Cookie', `${process.env.AUTH_COOKIE || 'omni_token'}=${auth.generateToken(me.id, me.role)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 3600}${process.env.COOKIE_SECURE === '1' ? '; Secure' : ''}`);
+    res.setHeader('Set-Cookie', `${process.env.AUTH_COOKIE || 'sid'}=${auth.generateToken(me.id, me.role)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 3600}${process.env.COOKIE_SECURE === '1' ? '; Secure' : ''}`);
     repo.audit.add({ actorId: me.id, actorRole: me.role, action: 'update', entity: 'user', entityId: me.id, note: 'Tự đổi mật khẩu (các phiên đăng nhập cũ bị thu hồi).' });
     repo.notifications.add({ userId: me.id, title: 'Mật khẩu của bạn vừa được đổi', body: 'Nếu không phải bạn thực hiện, hãy liên hệ quản trị viên ngay.' });
     return send(res, 200, { ok: true, signedOutOthers: true });
@@ -301,7 +380,7 @@ const csvCell = v => {
 };
 
 async function handleRunLog(ctx) {
-  const { req, res, url, send, repo, need } = ctx;
+  const { req, res, url, send, repo, need, isAdmin } = ctx;
   const m = url.pathname.match(/^\/api\/campaigns\/(\d+)\/(log|log\.csv|log-exports)$/);
   if (!m || req.method !== 'GET') return false;
   const user = need();
@@ -321,13 +400,24 @@ async function handleRunLog(ctx) {
     const { total, rows } = repo.runs.log({ ...filter, limit: pageSize, offset: (page - 1) * pageSize });
     return send(res, 200, {
       ok: true, total, page, pageSize, keywords: repo.runs.logKeywords(id),
-      rows: rows.map((r, i) => ({ n: (page - 1) * pageSize + i + 1, keyword: r.keyword || '', ip: r.ip || '', userAgent: r.userAgent || '', at: r.at })),
+      rows: rows.map((r, i) => ({
+        n: (page - 1) * pageSize + i + 1,
+        keyword: r.keyword || '',
+        ip: isAdmin ? (r.ip || '') : maskIp(r.ip),
+        userAgent: isAdmin ? (r.userAgent || '') : maskUserAgent(r.userAgent),
+        at: r.at,
+      })),
     });
   }
 
   const { total, rows } = repo.runs.log({ ...filter, limit: 100000, offset: 0 });
   const lines = [['STT', 'Từ khóa', 'IP', 'User Agent', 'Thời gian'].map(csvCell).join(',')];
-  rows.forEach((r, i) => lines.push([i + 1, r.keyword || '', r.ip || '', r.userAgent || '', fmtLogAt(r.at)].map(csvCell).join(',')));
+  rows.forEach((r, i) => lines.push([
+    i + 1, r.keyword || '',
+    isAdmin ? (r.ip || '') : maskIp(r.ip),
+    isAdmin ? (r.userAgent || '') : maskUserAgent(r.userAgent),
+    fmtLogAt(r.at),
+  ].map(csvCell).join(',')));
   const body = Buffer.from('﻿' + lines.join('\r\n') + '\r\n', 'utf8');
   const stamp = (await import('./database/repo.mjs')).now().slice(0, 10);
   res.writeHead(200, {
@@ -430,8 +520,8 @@ async function handleStats(ctx) {
     const st = campaign.status();
     return send(res, 200, {
       ok: true,
-      // Người dùng chỉ thấy các loại công khai; quản trị viên thấy đủ các loại
-      // (loại engine nội bộ vẫn được bán ở bảng giá).
+      // Người dùng chỉ thấy 2 loại công khai; quản trị viên thấy đủ 5 loại (3 loại còn lại là
+      // loại engine nội bộ vẫn được bán ở bảng giá: Organic ngắn, Đọc sâu, Kiểm tra từ khóa).
       types: isAdmin ? CAMPAIGN_TYPES : SELECTABLE_CAMPAIGN_TYPES,
       trafficPrices: TRAFFIC_PRICES,
       priceEffectiveFrom: PRICE_EFFECTIVE_FROM,
@@ -515,7 +605,7 @@ async function handleStats(ctx) {
       userId: isAdmin && url.searchParams.get('userId') ? Number(url.searchParams.get('userId')) : Number(user.id),
       limit: int(url.searchParams.get('limit'), 100),
     });
-    return send(res, 200, { ok: true, runs });
+    return send(res, 200, { ok: true, runs: runs.map(r => publicRun(r, isAdmin)) });
   }
 
   return false;
@@ -601,7 +691,7 @@ async function handleCampaigns(ctx) {
       return send(res, 200, {
         ok: true,
         campaign: withEngine(toCampaign(row), campaign),
-        runs: repo.runs.recent({ campaignId: id, limit: int(url.searchParams.get('runs'), 50) }),
+        runs: repo.runs.recent({ campaignId: id, limit: int(url.searchParams.get('runs'), 50) }).map(r => publicRun(r, isAdmin)),
         daily: repo.stats.daily({ campaignId: id, from: url.searchParams.get('from') || day(29), to: url.searchParams.get('to') || day(0) }),
         keywords: repo.stats.byKeyword({ campaignId: id, limit: 50 }),
         ranks: ranksByCampaign(repo, { campaignId: id })[id] || {},
@@ -1063,7 +1153,6 @@ function streamEvents(ctx) {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-store, no-transform',
     Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',
   });
   const push = payload => {
     try {
@@ -1094,11 +1183,16 @@ function streamEvents(ctx) {
         due: t.due, doneNow: t.doneNow, dbToday: t.dbToday, ownerId: t.userId,
         today: t.today,
       })),
-      workers: myWorkers.map(w => ({
-        slot: w.slot, taskId: w.taskId, keyword: w.keyword, step: w.step, ip: w.ip,
-        elapsed: w.elapsed, captchaLeft: w.captchaLeft, res: w.res ? { ramMB: w.res.ramMB, cpuPct: w.res.cpuPct } : null,
-      })),
-      events: (isAdmin ? st.events : st.events.filter(mineEvent)).slice(0, 8),
+      workers: isAdmin
+        ? myWorkers.map(w => ({
+          slot: w.slot, taskId: w.taskId, keyword: w.keyword, step: w.step, ip: w.ip,
+          elapsed: w.elapsed, captchaLeft: w.captchaLeft, res: w.res ? { ramMB: w.res.ramMB, cpuPct: w.res.cpuPct } : null,
+        }))
+        : myWorkers.map(w => ({
+          slot: w.slot, taskId: w.taskId, keyword: w.keyword, step: publicStep(w.step),
+          elapsed: w.elapsed, captchaLeft: w.captchaLeft,
+        })),
+      events: (isAdmin ? st.events : st.events.filter(mineEvent).map(sanitizeEvent)).slice(0, 8),
     };
   };
 

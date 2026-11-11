@@ -12,9 +12,15 @@ import { packageManifest } from './package-hash.mjs';
 import { validateRegistration, rateLimiter, registrationOpen, normalizeIp } from './auth/register.mjs';
 import { gateGuard, clientIp, isExternalRequest } from './gate.mjs';
 import { stamp } from './time.mjs';
+import { noteStatus } from './security-monitor.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3300;
+// Đặt HOST=127.0.0.1 để chỉ nghe trên loopback (production sau Cloudflare Tunnel/reverse proxy).
+// Không đặt thì nghe như cũ (cả IPv4 lẫn IPv6): cloudflared nối tới localhost có thể đi qua ::1.
+const HOST = process.env.HOST || '';
+// Cho phép chạy bản đã minify: npm run build:public rồi PUBLIC_DIR=dist/public.
+const PUBLIC_DIR = process.env.PUBLIC_DIR ? path.resolve(ROOT, process.env.PUBLIC_DIR) : path.join(ROOT, 'public');
 const OMNI_API_TIMEOUT = Math.max(10000, Number(process.env.OMNI_API_TIMEOUT) || 120000);
 const CONFIG_FILE = path.join(ROOT, 'config.json');
 const BRIDGES_FILE = path.join(ROOT, 'bridges.json');
@@ -198,6 +204,7 @@ async function runJob(job, { profileId, keyword, targetUrl, maxPages, closeAfter
 }
 
 function send(res, status, body, type = 'application/json; charset=utf-8') {
+  noteStatus(status);
   res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store' });
   res.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body));
   return true;
@@ -208,7 +215,7 @@ async function readBody(req) {
   return data ? JSON.parse(data) : {};
 }
 
-const TOKEN_COOKIE = process.env.AUTH_COOKIE || 'omni_token';
+const TOKEN_COOKIE = process.env.AUTH_COOKIE || 'sid';
 const TOKEN_MAX_AGE = 7 * 24 * 60 * 60;
 const AUTH_REQUIRED = process.env.AUTH_REQUIRED !== '0';
 const PUBLIC_URL = String(process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/+$/, '');
@@ -220,17 +227,19 @@ const loginFailByIp = rateLimiter({ limit: 30, windowMs: 10 * 60 * 1000 });
 const registerLimiter = rateLimiter({ limit: Math.max(1, Number(process.env.REGISTER_PER_10MIN) || 3), windowMs: 10 * 60 * 1000 });
 const PAGES = { '/gioi-thieu': 'portal.html', '/bang-gia': 'pricing.html', '/test': 'index.html', '/campaign': 'campaign.html', '/login': 'login.html', '/my': 'my.html', '/admin': 'admin.html' };
 const ASSETS = new Map([
-  ['/ui.css', ['public/ui.css', 'text/css; charset=utf-8']],
-  ['/ui.js', ['public/ui.js', 'text/javascript; charset=utf-8']],
-  ['/logo-icon.png', ['public/logo-icon.png', 'image/png']],
-  ['/logo-full.png', ['public/logo-full.png', 'image/png']],
-  ['/favicon.png', ['public/favicon.png', 'image/png']],
-  ['/wt-badge.js', ['public/wt-badge.js', 'text/javascript; charset=utf-8']],
-  ['/ui-admin.js', ['public/ui-admin.js', 'text/javascript; charset=utf-8']],
+  ['/ui.css', ['ui.css', 'text/css; charset=utf-8']],
+  ['/ui.js', ['ui.js', 'text/javascript; charset=utf-8']],
+  ['/logo-icon.png', ['logo-icon.png', 'image/png']],
+  ['/logo-full.png', ['logo-full.png', 'image/png']],
+  ['/favicon.png', ['favicon.png', 'image/png']],
+  ['/wt-badge.js', ['wt-badge.js', 'text/javascript; charset=utf-8']],
+  ['/embed.js', ['wt-badge.js', 'text/javascript; charset=utf-8']],
+  ['/ui-admin.js', ['ui-admin.js', 'text/javascript; charset=utf-8']],
 ]);
-const PUBLIC_PATHS = new Set(['/', '/gioi-thieu', '/favicon.svg', '/favicon.ico', '/favicon.png', '/logo-icon.png', '/logo-full.png', '/wt-badge.js', '/ui.css', '/ui.js', '/api/register', '/robots.txt', '/sitemap.xml', '/login', '/api/login', '/api/logout', '/api/health']);
+const PUBLIC_PATHS = new Set(['/', '/gioi-thieu', '/favicon.svg', '/favicon.ico', '/favicon.png', '/logo-icon.png', '/logo-full.png', '/wt-badge.js', '/embed.js', '/ui.css', '/ui.js', '/api/register', '/robots.txt', '/sitemap.xml', '/login', '/api/login', '/api/logout', '/api/health']);
 const LEGACY_ADMIN_API = /^\/api\/(profiles|config|run|job\/[^/]+|campaign(\/[a-z-]+)?)$/;
 const FONT_RE =/^\/fonts\/bevietnampro-(400|500|600|700|800)-(latin|vietnamese)\.woff2$/;
+const HASHED_ASSET_RE = /^\/(?:ui|ui-admin)\.[a-f0-9]{8}\.(?:js|css)$/;
 const ADMIN_PAGES = new Set(['/admin', '/campaign', '/test']);
 let authDeps = null;
 
@@ -279,7 +288,8 @@ async function currentUser(req) {
   try {
     deps = await loadAuthDeps();
   } catch (e) {
-    if (AUTH_REQUIRED) throw httpError(503, `Chưa cài đủ thư viện đăng nhập (bcrypt, jsonwebtoken, better-sqlite3): ${e.message}`);
+    console.error('[auth]', e.message);
+    if (AUTH_REQUIRED) throw httpError(503, 'Hệ thống chưa sẵn sàng. Vui lòng thử lại sau hoặc liên hệ quản trị viên.');
     return null;
   }
   try {
@@ -360,6 +370,9 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  // Các trang dùng <script>/<style> inline nên cần 'unsafe-inline'; phần còn lại siết theo origin.
+  // Khi nào tách JS/CSS ra file riêng thì bỏ 'unsafe-inline' để dùng nonce/hash.
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
@@ -376,6 +389,7 @@ const server = http.createServer(async (req, res) => {
     res.setHeader('Strict-Transport-Security', 'max-age=15552000');
   }
   try {
+    if (req.method === 'TRACE' || req.method === 'TRACK') return send(res, 405, { error: 'Phương thức không hỗ trợ.' });
     if (url.pathname.startsWith('/api/agent/') && await remoteHub.handle(req, res, url, { clientIp })) return;
     if (await gateGuard({ req, res, url, loadDeps: loadGateDeps })) return;
     let user = await currentUser(req);
@@ -391,7 +405,7 @@ const server = http.createServer(async (req, res) => {
       if (AUTH_REQUIRED && user?.role !== 'admin') return send(res, user ? 403 : 401, { error: user ? 'Chỉ quản trị viên được dùng chức năng này.' : 'Chưa đăng nhập hoặc phiên đã hết hạn.' });
       return await handleMachines(req, res, url, user);
     }
-    if (AUTH_REQUIRED && !user && !PUBLIC_PATHS.has(url.pathname) && !FONT_RE.test(url.pathname)) {
+    if (AUTH_REQUIRED && !user && !PUBLIC_PATHS.has(url.pathname) && !FONT_RE.test(url.pathname) && !HASHED_ASSET_RE.test(url.pathname)) {
       if (url.pathname.startsWith('/api/')) return send(res, 401, { error: 'Chưa đăng nhập hoặc phiên đã hết hạn.' });
       return redirect(res, `/login?next=${encodeURIComponent(url.pathname)}`);
     }
@@ -403,20 +417,24 @@ const server = http.createServer(async (req, res) => {
       return redirect(res, '/favicon.png');
     }
     if ((req.method === 'GET' || req.method === 'HEAD') && FONT_RE.test(url.pathname)) {
-      const buf = await fs.readFile(path.join(ROOT, 'public', url.pathname));
+      const buf = await fs.readFile(path.join(PUBLIC_DIR, url.pathname));
       res.writeHead(200, { 'Content-Type': 'font/woff2', 'Cache-Control': 'public, max-age=31536000, immutable' });
       return res.end(req.method === 'HEAD' ? undefined : buf);
     }
     if (url.pathname === '/ui-admin.js' && AUTH_REQUIRED && user?.role !== 'admin') {
       return send(res, 404, notFoundPage(user), 'text/html; charset=utf-8');
     }
+    if (req.method === 'GET' && HASHED_ASSET_RE.test(url.pathname)) {
+      const type = url.pathname.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8';
+      return send(res, 200, await fs.readFile(path.join(PUBLIC_DIR, url.pathname)), type);
+    }
     if (req.method === 'GET' && ASSETS.has(url.pathname)) {
       const [rel, type] = ASSETS.get(url.pathname);
-      return send(res, 200, await fs.readFile(path.join(ROOT, rel)), type);
+      return send(res, 200, await fs.readFile(path.join(PUBLIC_DIR, rel)), type);
     }
     if (req.method === 'GET' && PAGES[url.pathname]) {
       if (ADMIN_PAGES.has(url.pathname) && AUTH_REQUIRED && user?.role !== 'admin') return redirect(res, '/my');
-      const buf = await fs.readFile(path.join(ROOT, 'public', PAGES[url.pathname]));
+      const buf = await fs.readFile(path.join(PUBLIC_DIR, PAGES[url.pathname]));
       const html = buf.includes(PUBLIC_URL_TOKEN) ? buf.toString('utf8').split(PUBLIC_URL_TOKEN).join(PUBLIC_URL) : buf;
       return send(res, 200, html, 'text/html; charset=utf-8');
     }
@@ -451,7 +469,8 @@ const server = http.createServer(async (req, res) => {
       try {
         deps = await loadAuthDeps();
       } catch (e) {
-        return send(res, 503, { error: `Chưa cài đủ thư viện đăng nhập (bcrypt, jsonwebtoken, better-sqlite3): ${e.message}` });
+        console.error('[auth]', e.message);
+        return send(res, 503, { error: 'Hệ thống chưa sẵn sàng. Vui lòng thử lại sau hoặc liên hệ quản trị viên.' });
       }
 
       const ip = clientIp(req), userKey = `${ip}|${username.toLowerCase()}`;
@@ -510,8 +529,9 @@ const server = http.createServer(async (req, res) => {
       try {
         deps = await loadAuthDeps();
       } catch (e) {
+        console.error('[auth]', e.message);
         registerLimiter.release(ip);
-        return send(res, 503, { error: `Chưa cài đủ thư viện đăng nhập (bcrypt, jsonwebtoken, better-sqlite3): ${e.message}` });
+        return send(res, 503, { error: 'Hệ thống chưa sẵn sàng. Vui lòng thử lại sau hoặc liên hệ quản trị viên.' });
       }
       if (deps.findUser.get(reg.username)) {
         registerLimiter.release(ip);
@@ -551,6 +571,8 @@ const server = http.createServer(async (req, res) => {
       const txt = [
         'User-agent: *',
         'Allow: /gioi-thieu',
+        // Không liệt kê đường dẫn riêng tư ở đây: danh sách đó vô tình thành bản đồ
+        // endpoint cho scanner. Chỉ cần chặn toàn bộ, crawler hợp lệ vẫn vào /gioi-thieu.
         'Disallow: /',
         '',
         `Sitemap: ${PUBLIC_URL}/sitemap.xml`,
@@ -659,14 +681,16 @@ const server = http.createServer(async (req, res) => {
     }
     if (status < 500) return send(res, status, { error: msg });
     const hint = /ECONNREFUSED|fetch failed/i.test(msg)
-      ? ' — Hãy mở OmniLogin desktop và bật Bridge API (Settings → API, cổng 35353).'
+      ? ' — kiểm tra engine/bridge nội bộ (cổng 35353).'
       : '';
-    console.error(`[api] ${req.method} ${url.pathname}: ${msg}`);
-    send(res, 500, { error: msg + hint });
+    console.error(`[api] ${req.method} ${url.pathname}: ${msg}${hint}`);
+    send(res, 500, { error: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.' });
   }
 });
 
-server.listen(PORT, () => console.log(`WingTraffic Google Search: http://localhost:${PORT}  |  Chiến dịch: http://localhost:${PORT}/campaign`));
+const SHOWN_HOST = !HOST || HOST === '0.0.0.0' ? 'localhost' : HOST;
+const onListen = () => console.log(`WingTraffic Google Search: http://${SHOWN_HOST}:${PORT}  |  Chiến dịch: http://${SHOWN_HOST}:${PORT}/campaign`);
+if (HOST) server.listen(PORT, HOST, onListen); else server.listen(PORT, onListen);
 
 import('./backup.mjs').then(m => m.startAutoBackup()).catch(e => console.error('[backup] Không bật được sao lưu tự động:', e.message));
 
